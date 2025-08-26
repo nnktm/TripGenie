@@ -1,0 +1,6 @@
+outputs_pdf/
+.env
+*.env
+.env.local
+.env.production
+.env.development

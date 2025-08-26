@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>旅行プランを検索</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 24px;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background: #f6f6f6;
+        padding: 12px;
+        border-radius: 6px;
+      }
+      a.dl {
+        display: inline-block;
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>旅行プランを検索</h1>
+    <form action="???" method="post">
+      <label>行きたい場所（例：京都）</label><br />
+      <textarea name="query" placeholder="例：京都"></textarea>
+
+      <div style="margin-top: 12px">
+        <label>
+          検索深度:
+          <select name="depth">
+            <option value="basic" selected>basic（高速）</option>
+            <option value="advanced">advanced（網羅）</option>
+          </select>
+        </label>
+        <label style="margin-left: 16px">
+          最大件数:
+          <input type="number" name="max_results" value="2" min="1" max="3" />
+        </label>
+        <label style="margin-left: 16px">
+          <input type="checkbox" name="include_answer" checked />
+          Tavilyの要約を含める
+        </label>
+      </div>
+
+      <div style="margin-top: 16px">
+        <button type="submit">旅行プランを立てる</button>
+      </div>
+    </form>
+  </body>
+</html>

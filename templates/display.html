@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>検索結果</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 24px;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background: #f6f6f6;
+        padding: 12px;
+        border-radius: 6px;
+      }
+      a.dl {
+        display: inline-block;
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>検索結果</h1>
+    {% if result_text %}
+    <pre>{{ result_text }}</pre>
+    {% else %}
+    <p>結果がありません。</p>
+    {% endif %} {% if pdf_url %}
+    <p><a class="dl" href="{{ pdf_url }}">PDFをダウンロード</a></p>
+    {% else %}
+    <p>
+      PDFが未生成の場合は、もう一度お試しください（LLMが save_pdf
+      ツールを呼んだときに作成されます）。
+    </p>
+    {% endif %}
+
+    <p><a href="/">← もどる</a></p>
+  </body>
+</html>
