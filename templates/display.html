@@ -88,15 +88,64 @@
         border-radius: 6px;
         text-align: center;
       }
+      .section-card {
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+      .section-title {
+        color: #3498db;
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 8px;
+        margin-top: 0;
+        font-size: 18px;
+      }
+      .section-content {
+        margin-top: 10px;
+        line-height: 1.6;
+      }
+      .content-line {
+        margin-bottom: 5px;
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>🎯 旅行プラン結果</h1>
 
-      {% if result_text %}
+      {% if structured_data and structured_data.sections %}
       <div class="result-section">
-        <h2>📋 作成された旅行プラン</h2>
+        <h2>📖 PDFの内容（読みやすい形式）</h2>
+        {% for section in structured_data.sections %}
+        <div class="section-card">
+          <h3 class="section-title">
+            {% if section.title == "概要" %}📋{% elif section.title == "天気"
+            %}🌤️{% elif section.title == "交通" %}🚇{% elif section.title ==
+            "宿泊" %}🏨{% elif section.title == "観光地" %}🗺️{% elif
+            section.title == "食事" %}🍽️{% elif section.title == "買い物" %}🛍️{%
+            elif section.title == "注意事項" %}⚠️{% else %}📝{% endif %} {{
+            section.title }}
+          </h3>
+          <div class="section-content">
+            {% for line in section.formatted_content %}
+            <div class="content-line">
+              {% if '**' in line %} {% set parts = line.split('**') %} {% for i
+              in range(parts|length) %} {% if i % 2 == 1 %}
+              <strong>{{ parts[i] }}</strong>
+              {% else %} {{ parts[i] }} {% endif %} {% endfor %} {% else %} {{
+              line }} {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %} {% if result_text %}
+      <div class="result-section">
+        <h2>📝 詳細な旅行プラン</h2>
         <pre>{{ result_text }}</pre>
       </div>
       {% else %}

@@ -280,6 +280,15 @@ def display():
 - {stay_days}日間の旅程を考慮した、実現可能なスケジュールを作成してください。
 - どこの観光地に行くのかを明確かつ具体的にスケジュールを作成してください。
 - 移動時間も明記したスケジュールにしてください。
+- 最終的な回答は必ず上記のJSON形式で構造化してください。
+- 人間が読みやすい形で、以下の点に注意して作成してください：
+  * 各日のスケジュールは時間順に整理
+  * 移動時間と所要時間を明確に記載
+  * 観光地の詳細情報（営業時間、入場料、見どころ）を含める
+  * 食事や休憩時間も適切に配置
+  * 天候に応じた代替プランも提案
+  * 予算の目安も含める
+  * 注意事項や持ち物も具体的に記載
 """
     }
 
@@ -307,6 +316,207 @@ def display():
 def download_file(filename):
     directory = Path("outputs_pdf").resolve()
     return send_from_directory(directory, filename, as_attachment=True)
+
+def extract_structured_data(text, destination, date_range, stay_days, departure):
+    """テキストから構造化データを抽出する"""
+    try:
+        # 基本的な情報を抽出
+        data = {
+            "summary": f"{destination}での{stay_days}日間の旅行プラン",
+            "weather": extract_weather_info(text),
+            "events": extract_events_info(text),
+            "schedule": [],
+            "transportation": extract_transportation_info(text, departure, destination),
+            "accommodation": extract_accommodation_info(text, stay_days),
+            "tips": extract_tips_info(text),
+            "sections": []  # セクション別の内容を追加
+        }
+        
+        # テキストをセクション別に分割
+        data["sections"] = extract_sections_from_text(text, destination, stay_days)
+        
+        # 日付ごとのスケジュールを抽出
+        data["schedule"] = extract_detailed_schedule(text, destination, date_range, stay_days)
+        
+        return data
+    except Exception as e:
+        # エラーが発生した場合は基本的なデータを返す
+        return {
+            "summary": f"{destination}での{stay_days}日間の旅行プラン",
+            "weather": "天気情報",
+            "events": "イベント情報",
+            "schedule": [{
+                "day": 1,
+                "date": date_range,
+                "activities": [{
+                    "time": "詳細は本文をご確認ください",
+                    "location": destination,
+                    "activity": "旅行プラン",
+                    "details": "作成された旅行プラン"
+                }]
+            }],
+            "transportation": "交通手段",
+            "accommodation": "宿泊情報" if stay_days > 1 else "日帰り旅行",
+            "tips": "旅行のコツ",
+            "sections": []
+        }
+
+def extract_weather_info(text):
+    """天気情報を抽出"""
+    weather_keywords = ["天気", "気候", "予報", "気温", "雨", "晴れ", "曇り", "雪", "風"]
+    lines = text.split('\n')
+    
+    for line in lines:
+        if any(keyword in line for keyword in weather_keywords):
+            if len(line.strip()) > 5:  # 短すぎる行は除外
+                return line.strip()
+    
+    return "天気情報が含まれています"
+
+def extract_events_info(text):
+    """イベント情報を抽出"""
+    event_keywords = ["イベント", "祭り", "催し", "特別", "期間限定", "開催"]
+    lines = text.split('\n')
+    
+    for line in lines:
+        if any(keyword in line for keyword in event_keywords):
+            if len(line.strip()) > 5:
+                return line.strip()
+    
+    return "イベント情報が含まれています"
+
+def extract_transportation_info(text, departure, destination):
+    """交通手段情報を抽出"""
+    if departure:
+        transport_keywords = ["電車", "バス", "車", "徒歩", "所要時間", "駅", "路線"]
+        lines = text.split('\n')
+        
+        for line in lines:
+            if any(keyword in line for keyword in transport_keywords):
+                if len(line.strip()) > 5:
+                    return line.strip()
+        
+        return f"{departure}から{destination}までの交通手段の情報が含まれています"
+    else:
+        return f"{destination}周辺の移動手段の情報が含まれています"
+
+def extract_accommodation_info(text, stay_days):
+    """宿泊情報を抽出"""
+    if stay_days <= 1:
+        return "日帰り旅行のため宿泊情報は不要です"
+    
+    accommodation_keywords = ["ホテル", "旅館", "宿", "チェックイン", "チェックアウト", "宿泊"]
+    lines = text.split('\n')
+    
+    for line in lines:
+        if any(keyword in line for keyword in accommodation_keywords):
+            if len(line.strip()) > 5:
+                return line.strip()
+    
+    return "宿泊情報が含まれています"
+
+def extract_tips_info(text):
+    """旅行のコツを抽出"""
+    tips_keywords = ["コツ", "アドバイス", "注意", "気をつける", "準備", "持ち物", "おすすめ"]
+    lines = text.split('\n')
+    
+    for line in lines:
+        if any(keyword in line for keyword in tips_keywords):
+            if len(line.strip()) > 5:
+                return line.strip()
+    
+    return "旅行のコツが含まれています"
+
+def extract_detailed_schedule(text, destination, date_range, stay_days):
+    """詳細なスケジュールを抽出"""
+    schedule = []
+    lines = text.split('\n')
+    current_day = 1
+    current_activities = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # 日目の区切りを検出
+        if any(keyword in line for keyword in ['日目', '1日目', '2日目', '3日目', '4日目', '5日目', '6日目', '7日目']):
+            if current_activities:
+                schedule.append({
+                    "day": current_day,
+                    "date": date_range,
+                    "activities": current_activities
+                })
+            current_day += 1
+            current_activities = []
+            continue
+        
+        # 時間情報を含む行を活動として抽出
+        if any(keyword in line for keyword in ['時', '分', 'AM', 'PM', '午前', '午後', '〜', 'から']):
+            location = extract_location(line, destination)
+            time_info = extract_time(line)
+            details = extract_activity_details(line)
+            
+            current_activities.append({
+                "time": time_info,
+                "location": location,
+                "activity": line,
+                "details": details
+            })
+        # 観光地やスポット名が含まれる行も抽出
+        elif any(keyword in line for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '駅', '通り', '市場', 
+    'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
+    '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ']):
+            if line and len(line) > 3:
+                current_activities.append({
+                    "time": "時間未定",
+                    "location": line,
+                    "activity": line,
+                    "details": extract_activity_details(line)
+                })
+    
+    # 最後の日のスケジュールを追加
+    if current_activities:
+        schedule.append({
+            "day": current_day,
+            "date": date_range,
+            "activities": current_activities
+        })
+    
+    # スケジュールが空の場合は基本的なスケジュールを作成
+    if not schedule:
+        schedule = create_default_schedule(destination, date_range, stay_days)
+    
+    return schedule
+
+def extract_activity_details(line):
+    """活動の詳細情報を抽出"""
+    # 営業時間、入場料、見どころなどの情報を抽出
+    detail_keywords = ["営業時間", "入場料", "見どころ", "所要時間", "休憩", "食事", "移動"]
+    
+    for keyword in detail_keywords:
+        if keyword in line:
+            return f"{keyword}の情報が含まれています"
+    
+    return line
+
+def create_default_schedule(destination, date_range, stay_days):
+    """デフォルトのスケジュールを作成"""
+    schedule = []
+    
+    for day in range(1, stay_days + 1):
+        schedule.append({
+            "day": day,
+            "date": date_range,
+            "activities": [{
+                "time": "詳細は本文をご確認ください",
+                "location": destination,
+                "activity": f"{destination}での観光",
+                "details": f"{day}日目の観光予定"
+            }]
+        })
+    
+    return schedule
 
 if __name__ == "__main__":
     # Cloud9向け: 0.0.0.0:8080
