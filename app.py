@@ -6,7 +6,7 @@ load_dotenv()
 
 import json, re, requests
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Flask, request, render_template, send_from_directory, url_for
 
@@ -210,27 +210,75 @@ def index():
 @app.route("/display", methods=["POST"])
 def display():
     topic = request.form.get("query")
+    departure = request.form.get("departure", "").strip()
+    stay_days = int(request.form.get("stay_days", "1"))
+    travel_date = request.form.get("travel_date")
     depth = request.form.get("depth", "basic")
     include_answer = request.form.get("include_answer") == "on"
     max_results = int(request.form.get("max_results", "3") or 3)
 
     if not topic:
-        return render_template("display.html", result_text="トピックを入力してください。", pdf_url=None)
+        return render_template("display.html", result_text="目的地を入力してください。", pdf_url=None)
+    
+    if not travel_date:
+        return render_template("display.html", result_text="旅行開始日を入力してください。", pdf_url=None)
 
-    # プロンプト（業界研究の例をベースに、入力トピックへ差し替え）
-    system_msg = {"role": "system", "content": "あなたは旅行のプロです1日分の旅行プランを考えてください所要時間や移動時間なども考慮してください。計画を立てて段階的に調査を実行してください"}
+    # 日付を日本語形式に変換
+    try:
+        date_obj = datetime.strptime(travel_date, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%Y年%m月%d日")
+        day_of_week = ["月", "火", "水", "木", "金", "土", "日"][date_obj.weekday()]
+        formatted_date_with_day = f"{formatted_date}({day_of_week})"
+        
+        # 宿泊日数に応じて終了日を計算
+        if stay_days > 1:
+            end_date_obj = date_obj + timedelta(days=stay_days-1)
+            end_date = end_date_obj.strftime("%Y年%m月%d日")
+            end_day_of_week = ["月", "火", "水", "木", "金", "土", "日"][end_date_obj.weekday()]
+            formatted_end_date = f"{end_date}({end_day_of_week})"
+            date_range = f"{formatted_date_with_day}〜{formatted_end_date}"
+        else:
+            date_range = formatted_date_with_day
+            
+    except ValueError:
+        date_range = travel_date
+
+    # 旅行タイプを判定
+    if departure:
+        travel_type = "出発地から目的地への旅行"
+        travel_description = f"{departure}から{topic}への{stay_days}日間の旅行プラン"
+    else:
+        travel_type = "目的地中心の旅行"
+        travel_description = f"{topic}での{stay_days}日間の旅行プラン"
+
+    # プロンプト（出発地・宿泊日数を考慮した旅行プラン作成）
+    system_msg = {"role": "system", "content": "あなたは旅行のプロです。指定された条件（出発地、目的地、宿泊日数、日付）に基づいて、実用的で詳細な旅行プランを作成してください。所要時間や移動時間、宿泊施設なども考慮してください。"}
+    
     user_msg = {
         "role": "user",
         "content": f"""
-{topic} について以下を段階的に詳しく調べ、必要に応じてWeb検索ツールを使い、最後にPDFとして保存してください。
-・当日の天気を知る
-・天気にあう近隣の観光地を探す
-・トレンドを知る
-・その場所からの公共交通手段を用いた所要時間を知る
-・所要時間や移動時間を考慮し1日分の予定を立てる
+{travel_description}について以下を段階的に詳しく調べ、必要に応じてWeb検索ツールを使い、最後にPDFとして保存してください。
+
+旅行条件:
+- 目的地: {topic}
+- 出発地: {departure if departure else "目的地の中心地から開始"}
+- 期間: {date_range}（{stay_days}日間）
+- 旅行タイプ: {travel_type}
+
+調査項目:
+・{date_range}の天気予報を調べる
+・その期間の近隣のイベントや特別な催しを調べる
+・天気に適した観光地やアクティビティを探す
+・その期間のトレンドやおすすめスポットを調べる
+{f"・{departure}から{topic}までの交通手段と所要時間を調べる" if departure else "・{topic}周辺の移動手段と所要時間を調べる"}
+・宿泊施設の情報を調べる（{stay_days}日間の場合）
+・所要時間や移動時間を考慮した{stay_days}日間の詳細なスケジュールを作成
 
 探索のヒント:
 - まずアウトラインを作り、次に不足点を補うために検索を行い、最終的にPDF保存ツール(save_pdf)を呼び出してください。
+- 日付に特化した情報（イベント、天気、営業時間など）を重視してください。
+- {stay_days}日間の旅程を考慮した、実現可能なスケジュールを作成してください。
+- どこの観光地に行くのかを明確かつ具体的にスケジュールを作成してください。
 """
     }
 

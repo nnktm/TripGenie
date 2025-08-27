@@ -2,40 +2,126 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <title>検索結果</title>
+    <title>旅行プラン結果</title>
     <style>
       body {
         font-family: sans-serif;
         margin: 24px;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        color: #2c3e50;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 10px;
+      }
+      .result-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 20px;
+      }
+      .result-section h2 {
+        margin-top: 0;
+        color: #495057;
+        font-size: 20px;
       }
       pre {
         white-space: pre-wrap;
         word-wrap: break-word;
-        background: #f6f6f6;
-        padding: 12px;
+        background: #ffffff;
+        padding: 16px;
         border-radius: 6px;
+        border: 1px solid #dee2e6;
+        font-size: 14px;
+        line-height: 1.5;
+        overflow-x: auto;
+      }
+      .download-section {
+        background: #e8f5e8;
+        padding: 16px;
+        border-radius: 6px;
+        border: 1px solid #c3e6c3;
+        margin: 20px 0;
+      }
+      .download-section h3 {
+        margin-top: 0;
+        color: #2d5a2d;
       }
       a.dl {
         display: inline-block;
-        margin-top: 12px;
+        background: #28a745;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 4px;
+        font-weight: bold;
+        margin-top: 8px;
+      }
+      a.dl:hover {
+        background: #218838;
+      }
+      .back-link {
+        margin-top: 30px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        text-align: center;
+      }
+      .back-link a {
+        color: #007bff;
+        text-decoration: none;
+        font-weight: bold;
+      }
+      .back-link a:hover {
+        text-decoration: underline;
+      }
+      .no-result {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        padding: 16px;
+        border-radius: 6px;
+        text-align: center;
       }
     </style>
   </head>
   <body>
-    <h1>検索結果</h1>
-    {% if result_text %}
-    <pre>{{ result_text }}</pre>
-    {% else %}
-    <p>結果がありません。</p>
-    {% endif %} {% if pdf_url %}
-    <p><a class="dl" href="{{ pdf_url }}">PDFをダウンロード</a></p>
-    {% else %}
-    <p>
-      PDFが未生成の場合は、もう一度お試しください（LLMが save_pdf
-      ツールを呼んだときに作成されます）。
-    </p>
-    {% endif %}
+    <div class="container">
+      <h1>🎯 旅行プラン結果</h1>
 
-    <p><a href="/">← もどる</a></p>
+      {% if result_text %}
+      <div class="result-section">
+        <h2>📋 作成された旅行プラン</h2>
+        <pre>{{ result_text }}</pre>
+      </div>
+      {% else %}
+      <div class="no-result">
+        <p>結果がありません。</p>
+      </div>
+      {% endif %} {% if pdf_url %}
+      <div class="download-section">
+        <h3>📄 PDFダウンロード</h3>
+        <p>旅行プランがPDFファイルとして作成されました。</p>
+        <a class="dl" href="{{ pdf_url }}">📥 PDFをダウンロード</a>
+      </div>
+      {% else %}
+      <div class="result-section">
+        <h3>⚠️ PDF生成について</h3>
+        <p>
+          PDFが未生成の場合は、もう一度お試しください（LLMが save_pdf
+          ツールを呼んだときに作成されます）。
+        </p>
+      </div>
+      {% endif %}
+
+      <div class="back-link">
+        <a href="/">← 新しい旅行プランを作成</a>
+      </div>
+    </div>
   </body>
 </html>

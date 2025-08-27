@@ -20,33 +20,136 @@
         display: inline-block;
         margin-top: 12px;
       }
+      .form-group {
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: bold;
+      }
+      input[type="date"],
+      textarea,
+      select,
+      input[type="number"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      textarea {
+        height: 80px;
+        resize: vertical;
+      }
+      .options-row {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .options-row > div {
+        flex: 1;
+        min-width: 200px;
+      }
+      .travel-info {
+        background: #f8f9fa;
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 16px;
+      }
+      .travel-info h3 {
+        margin-top: 0;
+        color: #495057;
+        font-size: 18px;
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      @media (max-width: 768px) {
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+      button[type="submit"] {
+        background: #007bff;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      button[type="submit"]:hover {
+        background: #0056b3;
+      }
     </style>
   </head>
   <body>
     <h1>旅行プランを検索</h1>
     <form action="/display" method="post">
-      <label>行きたい場所（例：京都）</label><br />
-      <textarea name="query" placeholder="例：京都"></textarea>
-
-      <div style="margin-top: 12px">
-        <label>
-          検索深度:
-          <select name="depth">
-            <option value="basic" selected>basic（高速）</option>
-            <option value="advanced">advanced（網羅）</option>
-          </select>
-        </label>
-        <label style="margin-left: 16px">
-          最大件数:
-          <input type="number" name="max_results" value="2" min="1" max="3" />
-        </label>
-        <label style="margin-left: 16px">
-          <input type="checkbox" name="include_answer" checked />
-          Tavilyの要約を含める
-        </label>
+      <div class="form-group">
+        <label>目的地（例：京都）</label>
+        <textarea name="query" placeholder="例：京都" required></textarea>
       </div>
 
-      <div style="margin-top: 16px">
+      <div class="travel-info">
+        <h3>旅行詳細</h3>
+        <div class="form-row">
+          <div>
+            <label>出発地（任意）</label>
+            <input type="text" name="departure" placeholder="例：東京駅" />
+            <small style="color: #6c757d"
+              >※未入力の場合は目的地の中心地から開始</small
+            >
+          </div>
+          <div>
+            <label>宿泊日数</label>
+            <select name="stay_days">
+              <option value="1" selected>1日（日帰り）</option>
+              <option value="2">2日</option>
+              <option value="3">3日</option>
+              <option value="4">4日</option>
+              <option value="5">5日</option>
+              <option value="6">6日</option>
+              <option value="7">7日</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label>旅行開始日</label>
+            <input type="date" name="travel_date" required />
+          </div>
+          <div>
+            <label>最大件数</label>
+            <input type="number" name="max_results" value="3" min="1" max="5" />
+          </div>
+        </div>
+      </div>
+
+      <div class="options-row">
+        <div>
+          <label>
+            検索深度:
+            <select name="depth">
+              <option value="basic" selected>basic（高速）</option>
+              <option value="advanced">advanced（網羅）</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <label>
+            <input type="checkbox" name="include_answer" checked />
+            Tavilyの要約を含める
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
         <button type="submit">旅行プランを立てる</button>
       </div>
     </form>
