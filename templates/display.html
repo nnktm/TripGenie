@@ -9,7 +9,44 @@
     <div class="container">
       <h1>🎯 旅行プラン結果</h1>
 
-      {% if travel_info %}
+      <!-- 目的地の写真表示セクション -->
+      {% if photos_data and destination %}
+      <div class="photos-section">
+        <h2>📸 {{ destination }}の写真</h2>
+        <div class="photos-grid">
+          {% set photo_count = 0 %} {% for location, photos in
+          photos_data.items() %} {% for photo in photos %} {% if photo_count < 3
+          %}
+          <div class="photo-card">
+            <div class="photo-container">
+              <img
+                src="{{ photo.url }}"
+                alt="{{ photo.alt }}"
+                class="destination-photo"
+                loading="lazy"
+                style="width: 30%; height: 30%; object-fit: cover"
+              />
+              <div class="photo-overlay">
+                <div class="photo-info">
+                  <span class="location-name">{{ location }}</span>
+                  <span class="photographer">📷 {{ photo.photographer }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% set photo_count = photo_count + 1 %} {% endif %} {% endfor %} {%
+          endfor %}
+        </div>
+        <div class="photo-credit">
+          <p>
+            写真提供:
+            <a href="https://unsplash.com" target="_blank" rel="noopener"
+              >Unsplash</a
+            >
+          </p>
+        </div>
+      </div>
+      {% endif %} {% if travel_info %}
       <div class="travel-header">
         <h2>{{ travel_info.destination }} 旅行プラン</h2>
         <div class="travel-details">

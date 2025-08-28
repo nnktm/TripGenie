@@ -18,6 +18,74 @@ except ImportError:
 
 client = OpenAI()  # OPENAI_API_KEY を環境変数から自動取得
 
+# === Unsplash API クライアント ===
+def get_unsplash_photo(query, count=1):
+    """Unsplash APIを使用して観光地の写真を取得する"""
+    access_key = os.getenv("UNSPLASH_ACCESS_KEY")
+    if not access_key:
+        print("警告: UNSPLASH_ACCESS_KEY が設定されていません")
+        return []
+    
+    try:
+        print(f"Unsplash API で写真を検索中: '{query}' (最大{count}枚)")
+        url = "https://api.unsplash.com/search/photos"
+        headers = {
+            "Authorization": f"Client-ID {access_key}"
+        }
+        params = {
+            "query": query,
+            "per_page": count,
+            "orientation": "landscape",
+            "content_filter": "high"
+        }
+        
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json()
+        photos = []
+        
+        for photo in data.get("results", []):
+            photos.append({
+                "id": photo["id"],
+                "url": photo["urls"]["regular"],
+                "thumb": photo["urls"]["thumb"],
+                "alt": photo.get("alt_description", query),
+                "photographer": photo["user"]["name"],
+                "photographer_url": photo["user"]["links"]["html"]
+            })
+        
+        print(f"'{query}' の写真を {len(photos)} 枚取得しました")
+        return photos
+    except Exception as e:
+        print(f"Unsplash API エラー ({query}): {str(e)}")
+        return []
+
+def get_destination_photos(destination, attractions_list):
+    """観光地のリストから写真を取得する（最大3枚）"""
+    all_photos = {}
+    total_photos = 0
+    max_photos = 3
+    
+    # 目的地の写真を取得（最大2枚）
+    destination_photos = get_unsplash_photo(destination, 2)
+    if destination_photos:
+        all_photos[destination] = destination_photos
+        total_photos += len(destination_photos)
+    
+    # 観光地のリストから写真を取得（残りの枚数分）
+    for attraction in attractions_list:
+        if attraction and attraction != destination and len(attraction) > 2 and total_photos < max_photos:
+            # 観光地名から写真を取得
+            photos = get_unsplash_photo(attraction, 1)
+            if photos:
+                all_photos[attraction] = photos
+                total_photos += 1
+                if total_photos >= max_photos:
+                    break
+    
+    return all_photos
+
 # === PDF生成 (ReportLab) ===
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
@@ -351,7 +419,72 @@ def display():
         # /download/<filename> で配信
         pdf_url = url_for("download_file", filename=Path(pdf_path).name)
 
-    return render_template("display.html", result_text=result_text, pdf_url=pdf_url)
+    # 観光地の写真を取得
+    photos_data = {}
+    try:
+        # 基本的な観光地を抽出
+        common_attractions = [topic]  # 目的地を追加
+        if departure:
+            common_attractions.append(departure)
+        
+        # 結果テキストから観光地名を抽出
+        lines = result_text.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line or len(line) < 3:
+                continue
+                
+            # 観光地のキーワードを含む行を検出
+            if any(keyword in line for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '駅', '通り', '市場', 
+                'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
+                '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ', '観光', '名所']):
+                
+                # 行から観光地名を抽出（キーワードの前後の文字列を取得）
+                for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '駅', '通り', '市場', 
+                    'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
+                    '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ']:
+                    if keyword in line:
+                        # キーワードの前後の文字列を抽出
+                        parts = line.split(keyword)
+                        for part in parts:
+                            part = part.strip()
+                            if part and len(part) > 2 and part not in common_attractions:
+                                # 一般的でない文字を除去
+                                clean_part = re.sub(r'[【】「」『』()（）\[\]{}]', '', part)
+                                if clean_part and len(clean_part) > 2:
+                                    common_attractions.append(clean_part)
+                        break
+        
+        # 重複を除去
+        common_attractions = list(dict.fromkeys(common_attractions))
+        
+        # デバッグ情報を出力
+        print(f"検出された観光地: {common_attractions}")
+        
+        # 写真を取得
+        photos_data = get_destination_photos(topic, common_attractions)
+        
+        # 写真取得結果を出力
+        print(f"取得された写真数: {len(photos_data)}")
+        
+        # 写真が3枚未満の場合は、目的地の写真を追加して3枚にする
+        total_photos = sum(len(photos) for photos in photos_data.values())
+        if total_photos < 3 and topic in photos_data:
+            # 目的地から追加の写真を取得
+            additional_photos = get_unsplash_photo(topic, 3 - total_photos)
+            if additional_photos:
+                photos_data[topic].extend(additional_photos)
+                print(f"目的地の写真を追加: {len(additional_photos)}枚")
+        
+    except Exception as e:
+        print(f"写真取得エラー: {str(e)}")
+        photos_data = {}
+
+    return render_template("display.html", 
+                         result_text=result_text, 
+                         pdf_url=pdf_url,
+                         photos_data=photos_data,
+                         destination=topic)
 
 @app.route("/download/<path:filename>")
 def download_file(filename):
@@ -564,6 +697,7 @@ if __name__ == "__main__":
     print("=== 環境変数確認 ===")
     tavily_key = os.getenv("TAVILY_API_KEY")
     openai_key = os.getenv("OPENAI_API_KEY")
+    unsplash_key = os.getenv("UNSPLASH_ACCESS_KEY")
     
     if tavily_key:
         print(f"✓ TAVILY_API_KEY: {tavily_key[:10]}...{tavily_key[-4:] if len(tavily_key) > 14 else '短すぎる'}")
@@ -576,6 +710,11 @@ if __name__ == "__main__":
         print(f"✓ OPENAI_API_KEY: {openai_key[:10]}...{openai_key[-4:] if len(openai_key) > 14 else '短すぎる'}")
     else:
         print("❌ OPENAI_API_KEY が設定されていません")
+    
+    if unsplash_key:
+        print(f"✓ UNSPLASH_ACCESS_KEY: {unsplash_key[:10]}...{unsplash_key[-4:] if len(unsplash_key) > 14 else '短すぎる'}")
+    else:
+        print("❌ UNSPLASH_ACCESS_KEY が設定されていません")
     
     print("==================")
     
