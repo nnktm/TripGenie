@@ -62,7 +62,7 @@ def get_unsplash_photo(query, count=1):
         return []
 
 def get_destination_photos(destination, attractions_list):
-    """観光地のリストから写真を取得する（最大3枚）"""
+    """旅行プランに含まれる観光地から写真を取得する（最大3枚）"""
     all_photos = {}
     total_photos = 0
     max_photos = 3
@@ -73,9 +73,16 @@ def get_destination_photos(destination, attractions_list):
         all_photos[destination] = destination_photos
         total_photos += len(destination_photos)
     
-    # 観光地のリストから写真を取得（残りの枚数分）
+    # 旅行プランに含まれる観光地から写真を取得（残りの枚数分）
     for attraction in attractions_list:
-        if attraction and attraction != destination and len(attraction) > 2 and total_photos < max_photos:
+        # 出発地は除外し、目的地と異なる観光地のみ処理
+        if (attraction and 
+            attraction != destination and 
+            len(attraction) > 2 and 
+            total_photos < max_photos and
+            # 出発地のキーワードを含まない観光地のみ
+            not any(departure_keyword in attraction for departure_keyword in ['駅', '空港', '港', 'バス停'])):
+            
             # 観光地名から写真を取得
             photos = get_unsplash_photo(attraction, 1)
             if photos:
@@ -382,6 +389,7 @@ def display():
 {f"・{departure}から{topic}までの交通手段と所要時間を調べる" if departure else "・{topic}周辺の移動手段と所要時間を調べる"}
 ・宿泊施設の情報を調べる（{stay_days}日間の場合）
 ・所要時間や移動時間を考慮した{stay_days}日間の詳細なスケジュールを作成
+・スケジュールにある観光地の写真を3枚分調べる
 
 探索のヒント:
 - まずアウトラインを作り、次に不足点を補うために検索を行い、最終的にPDF保存ツール(save_pdf)を呼び出してください。
@@ -422,10 +430,8 @@ def display():
     # 観光地の写真を取得
     photos_data = {}
     try:
-        # 基本的な観光地を抽出
-        common_attractions = [topic]  # 目的地を追加
-        if departure:
-            common_attractions.append(departure)
+        # 旅行プランから観光地名を抽出
+        attractions_from_plan = []
         
         # 結果テキストから観光地名を抽出
         lines = result_text.split('\n')
@@ -435,12 +441,12 @@ def display():
                 continue
                 
             # 観光地のキーワードを含む行を検出
-            if any(keyword in line for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '駅', '通り', '市場', 
+            if any(keyword in line for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '通り', '市場', 
                 'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
                 '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ', '観光', '名所']):
                 
                 # 行から観光地名を抽出（キーワードの前後の文字列を取得）
-                for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '駅', '通り', '市場', 
+                for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '通り', '市場', 
                     'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
                     '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ']:
                     if keyword in line:
@@ -448,24 +454,30 @@ def display():
                         parts = line.split(keyword)
                         for part in parts:
                             part = part.strip()
-                            if part and len(part) > 2 and part not in common_attractions:
+                            if part and len(part) > 2 and part not in attractions_from_plan:
                                 # 一般的でない文字を除去
                                 clean_part = re.sub(r'[【】「」『』()（）\[\]{}]', '', part)
                                 if clean_part and len(clean_part) > 2:
-                                    common_attractions.append(clean_part)
+                                    attractions_from_plan.append(clean_part)
                         break
         
+        # 目的地を最初に追加（出発地は除外）
+        attractions_list = [topic]
+        attractions_list.extend(attractions_from_plan)
+        
         # 重複を除去
-        common_attractions = list(dict.fromkeys(common_attractions))
+        attractions_list = list(dict.fromkeys(attractions_list))
         
         # デバッグ情報を出力
-        print(f"検出された観光地: {common_attractions}")
+        print(f"旅行プランから検出された観光地: {attractions_list}")
         
-        # 写真を取得
-        photos_data = get_destination_photos(topic, common_attractions)
+        # 写真を取得（出発地は除外）
+        photos_data = get_destination_photos(topic, attractions_list)
         
         # 写真取得結果を出力
         print(f"取得された写真数: {len(photos_data)}")
+        for location, photos in photos_data.items():
+            print(f"  - {location}: {len(photos)}枚")
         
         # 写真が3枚未満の場合は、目的地の写真を追加して3枚にする
         total_photos = sum(len(photos) for photos in photos_data.values())

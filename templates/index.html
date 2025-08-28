@@ -2,7 +2,10 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}"/>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/index.css') }}"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>旅行プランを検索</title>
   </head>
@@ -44,7 +47,7 @@
           </div>
           <div>
             <label>最大件数</label>
-            <input type="number" name="max_results" value="3" min="1" max="5" />
+            <input type="number" name="max_results" value="1" min="1" max="5" />
           </div>
         </div>
       </div>

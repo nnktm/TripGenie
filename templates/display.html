@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>旅行プラン結果</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/display.css') }}">
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="container">
@@ -18,13 +18,16 @@
           photos_data.items() %} {% for photo in photos %} {% if photo_count < 3
           %}
           <div class="photo-card">
-            <div class="photo-container">
+            <div
+              class="photo-container"
+              style="display: flex; flex-direction: column"
+            >
               <img
                 src="{{ photo.url }}"
                 alt="{{ photo.alt }}"
                 class="destination-photo"
                 loading="lazy"
-                style="width: 30%; height: 30%; object-fit: cover"
+                style="width: 30%; height: 30%; object-fit: cover; margin: 3%"
               />
               <div class="photo-overlay">
                 <div class="photo-info">
@@ -154,6 +157,10 @@
         </div>
       </div>
       {% endif %} {% if result_text %}
+      <div class="result-section">
+        <h2>📝 詳細な旅行プラン</h2>
+        <pre>{{ result_text }}</pre>
+      </div>
       {% else %}
       <div class="no-result">
         <p>結果がありません。</p>
@@ -169,7 +176,7 @@
           style="
             margin-top: 20px;
             font-size: 18px;
-            color: #000000;
+            color: #28a745;
             font-weight: bold;
           "
         >
