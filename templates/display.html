@@ -115,106 +115,26 @@
             <p class="text-gray-600">{{ structured_data.accommodation }}</p>
           </div>
         </div>
-      </div>
+      </section>
+      {% endif %}
 
-      {% if structured_data.tips %}
-      <div class="result-section">
-        <h2>💡 旅行のコツ</h2>
-        <div class="tips-card">
-          <p>{{ structured_data.tips }}</p>
-        </div>
-      </div>
-      {% endif %} {% endif %} {% if structured_data and structured_data.sections
-      %}
-      <div class="result-section">
-        <h2>📖 PDFの内容（読みやすい形式）</h2>
-        {% for section in structured_data.sections %}
-        <div class="section-card">
-          <h3 class="section-title">
-            {% if section.title == "概要" %}📋{% elif section.title == "天気"
-            %}🌤️{% elif section.title == "交通" %}🚇{% elif section.title ==
-            "宿泊" %}🏨{% elif section.title == "観光地" %}🗺️{% elif
-            section.title == "食事" %}🍽️{% elif section.title == "買い物" %}🛍️{%
-            elif section.title == "注意事項" %}⚠️{% else %}📝{% endif %} {{
-            section.title }}
-          </h3>
-          <div class="section-content">
-            {% for line in section.formatted_content %}
-            <div class="content-line">
-              {% if '**' in line %} {% set parts = line.split('**') %} {% for i
-              in range(parts|length) %} {% if i % 2 == 1 %}
-              <strong>{{ parts[i] }}</strong>
-              {% else %} {{ parts[i] }} {% endif %} {% endfor %} {% else %} {{
-              line }} {% endif %}
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %} {% if structured_data and structured_data.schedule %}
-      <div class="result-section">
-        <h2>🗺️ 訪れる予定の観光地</h2>
-        <div class="schedule-section">
-          {% for day in structured_data.schedule %}
-          <div class="schedule-day">
-            <div class="day-header">{{ day.day }}日目</div>
-            <div class="day-activities">
-              {% for activity in day.activities %}
-              <div class="activity-item">
-                <div class="activity-time">{{ activity.time }}</div>
-                <div class="activity-details">
-                  <h4>{{ activity.location }}</h4>
-                  <p>{{ activity.activity }}</p>
-                  {% if activity.details and activity.details !=
-                  activity.activity %}
-                  <p style="color: #888; font-size: 13px">
-                    {{ activity.details }}
-                  </p>
-                  {% endif %}
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %} {% if result_text %}
-      <div class="result-section">
-        <h2>📝 詳細な旅行プラン</h2>
-        <pre>{{ result_text }}</pre>
-      </div>
-      {% else %}
-      <div class="no-result">
-        <p>結果がありません。</p>
-      </div>
-      {% endif %} {% if pdf_url %}
-      <div class="download-section">
-        <h3>📄 旅行プランPDF</h3>
-        <p>
-          旅行プランをPDFとして保存しました。以下のリンクからダウンロードできます。
-        </p>
-        <a class="dl" href="{{ pdf_url }}">📥 旅行プランPDFをダウンロード</a>
-        <p
-          style="
-            margin-top: 20px;
-            font-size: 18px;
-            color: #000000;
-            font-weight: bold;
-          "
+      <!-- PDFダウンロード -->
+      {% if pdf_url %}
+      <section
+        class="mb-16 text-center bg-gradient-to-r from-indigo-50 to-white rounded-2xl p-10 shadow-md border border-gray-100"
+      >
+        <h3 class="text-2xl font-bold mb-4 text-indigo-700">
+          📄 旅行プランPDF
+        </h3>
+        <p class="mb-6 text-gray-700">旅行プランをPDFとして保存しました。</p>
+        <a
+          href="{{ pdf_url }}"
+          class="inline-block bg-indigo-600 text-white text-lg font-semibold px-8 py-4 rounded-xl shadow hover:bg-indigo-500 transition"
         >
-          🎉 旅行を楽しんでください！
-        </p>
-      </div>
-      {% else %}
-      <div class="result-section">
-        <h3>⚠️ PDF生成について</h3>
-        <p>
-          PDFが未生成の場合は、もう一度お試しください（LLMが save_pdf
-          ツールを呼んだときに作成されます）。
-        </p>
-      </div>
+          📥 ダウンロード
+        </a>
+        <p class="mt-6 text-lg text-gray-800 font-bold">🎉 素敵な旅行を！</p>
+      </section>
       {% endif %}
 
       <!-- 戻るリンク -->
