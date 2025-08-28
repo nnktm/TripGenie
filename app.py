@@ -86,16 +86,13 @@ def call_tavily_search(query, depth="basic", max_results=3, include_answer=False
     # 最大結果数の制限
     max_results = max(1, min(int(max_results), 10))
     
+    # 最新のTavily API仕様に合わせたパラメータ
     payload = {
         "query": query.strip(),
         "search_depth": depth,
         "max_results": max_results,
         "include_answer": bool(include_answer),
-        "include_images": False,
-        "include_raw_content": False,
-        "include_domains": [],
-        "exclude_domains": [],
-        "search_type": "search"  # 明示的に検索タイプを指定
+        "include_images": False
     }
     
     try:
@@ -196,14 +193,34 @@ def execute_function(call):
         q = args.get("query")
         if not q:
             return {"error": "query is required"}
-        return {
-            "data": call_tavily_search(
-                q,
-                args.get("depth", "basic"),
-                args.get("max_results", 3),
-                args.get("include_answer", False),
-            )
-        }
+        
+        try:
+            # パラメータの検証と正規化
+            depth = args.get("depth", "basic")
+            if depth not in ["basic", "advanced"]:
+                depth = "basic"
+            
+            max_results = args.get("max_results", 3)
+            try:
+                max_results = int(max_results)
+                max_results = max(1, min(max_results, 10))
+            except (ValueError, TypeError):
+                max_results = 3
+            
+            include_answer = bool(args.get("include_answer", False))
+            
+            return {
+                "data": call_tavily_search(
+                    q,
+                    depth,
+                    max_results,
+                    include_answer,
+                )
+            }
+        except Exception as e:
+            print(f"Tavily API 実行エラー: {str(e)}")
+            return {"error": f"Tavily API エラー: {str(e)}"}
+            
     if name == "save_pdf":
         return save_pdf(
             text=args.get("text", ""),
