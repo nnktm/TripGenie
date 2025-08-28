@@ -74,16 +74,57 @@ def call_tavily_search(query, depth="basic", max_results=3, include_answer=False
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+    
+    # パラメータの検証と正規化
+    if not query or len(query.strip()) < 3:
+        raise ValueError("検索クエリは3文字以上である必要があります")
+    
+    # 検索深度の検証
+    if depth not in ["basic", "advanced"]:
+        depth = "basic"
+    
+    # 最大結果数の制限
+    max_results = max(1, min(int(max_results), 10))
+    
     payload = {
-        "query": query,
-        "search_depth": depth,       # "basic" or "advanced"
-        "max_results": int(max_results),
+        "query": query.strip(),
+        "search_depth": depth,
+        "max_results": max_results,
         "include_answer": bool(include_answer),
         "include_images": False,
+        "include_raw_content": False,
+        "include_domains": [],
+        "exclude_domains": [],
+        "search_type": "search"  # 明示的に検索タイプを指定
     }
-    resp = requests.post(url, headers=headers, json=payload, timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+    
+    try:
+        print(f"Tavily API リクエスト: {json.dumps(payload, ensure_ascii=False)}")
+        resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        
+        if resp.status_code != 200:
+            print(f"Tavily API レスポンス: {resp.status_code} - {resp.text}")
+        
+        resp.raise_for_status()
+        return resp.json()
+    except requests.exceptions.HTTPError as e:
+        error_detail = f"HTTP {e.response.status_code}: {e.response.text}"
+        print(f"Tavily API エラー: {error_detail}")
+        
+        # 特定のエラーコードに対する詳細な説明
+        if e.response.status_code == 432:
+            raise RuntimeError(f"Tavily API エラー (432): リクエストパラメータが無効です。詳細: {error_detail}")
+        elif e.response.status_code == 401:
+            raise RuntimeError("Tavily API エラー (401): APIキーが無効です。APIキーを確認してください。")
+        elif e.response.status_code == 429:
+            raise RuntimeError("Tavily API エラー (429): レート制限に達しました。しばらく待ってから再試行してください。")
+        elif e.response.status_code == 500:
+            raise RuntimeError("Tavily API エラー (500): サーバー内部エラーが発生しました。しばらく待ってから再試行してください。")
+        else:
+            raise RuntimeError(f"Tavily API エラー: {error_detail}")
+    except requests.exceptions.RequestException as e:
+        print(f"Tavily API リクエストエラー: {str(e)}")
+        raise RuntimeError(f"Tavily API リクエストエラー: {str(e)}")
 
 # === ツール定義 ===
 function_descriptions = [
@@ -519,5 +560,24 @@ def create_default_schedule(destination, date_range, stay_days):
     return schedule
 
 if __name__ == "__main__":
+    # 環境変数の確認
+    print("=== 環境変数確認 ===")
+    tavily_key = os.getenv("TAVILY_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+    
+    if tavily_key:
+        print(f"✓ TAVILY_API_KEY: {tavily_key[:10]}...{tavily_key[-4:] if len(tavily_key) > 14 else '短すぎる'}")
+        if len(tavily_key) < 20:
+            print("⚠️  警告: TAVILY_API_KEYが短すぎます")
+    else:
+        print("❌ TAVILY_API_KEY が設定されていません")
+    
+    if openai_key:
+        print(f"✓ OPENAI_API_KEY: {openai_key[:10]}...{openai_key[-4:] if len(openai_key) > 14 else '短すぎる'}")
+    else:
+        print("❌ OPENAI_API_KEY が設定されていません")
+    
+    print("==================")
+    
     # Cloud9向け: 0.0.0.0:8080
     app.run(debug=True, host="0.0.0.0", port=8080)

@@ -2,95 +2,13 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <link rel="stylesheet" href="style.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>旅行プランを検索</title>
-    <style>
-      body {
-        font-family: sans-serif;
-        margin: 24px;
-      }
-      pre {
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        background: #f6f6f6;
-        padding: 12px;
-        border-radius: 6px;
-      }
-      a.dl {
-        display: inline-block;
-        margin-top: 12px;
-      }
-      .form-group {
-        margin-bottom: 16px;
-      }
-      label {
-        display: block;
-        margin-bottom: 4px;
-        font-weight: bold;
-      }
-      input[type="date"],
-      textarea,
-      select,
-      input[type="number"] {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
-      }
-      textarea {
-        height: 80px;
-        resize: vertical;
-      }
-      .options-row {
-        display: flex;
-        gap: 16px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      .options-row > div {
-        flex: 1;
-        min-width: 200px;
-      }
-      .travel-info {
-        background: #f8f9fa;
-        padding: 16px;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-        margin-bottom: 16px;
-      }
-      .travel-info h3 {
-        margin-top: 0;
-        color: #495057;
-        font-size: 18px;
-      }
-      .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-      }
-      @media (max-width: 768px) {
-        .form-row {
-          grid-template-columns: 1fr;
-        }
-      }
-      button[type="submit"] {
-        background: #007bff;
-        color: white;
-        padding: 12px 24px;
-        border: none;
-        border-radius: 4px;
-        font-size: 16px;
-        cursor: pointer;
-      }
-      button[type="submit"]:hover {
-        background: #0056b3;
-      }
-    </style>
   </head>
   <body>
     <h1>旅行プランを検索</h1>
-    <form action="/display" method="post">
+    <form id="travelForm" action="/display" method="post">
       <div class="form-group">
         <label>目的地（例：京都）</label>
         <textarea name="query" placeholder="例：京都" required></textarea>
@@ -150,8 +68,85 @@
       </div>
 
       <div class="form-group">
-        <button type="submit">旅行プランを立てる</button>
+        <button type="submit" id="submitBtn">旅行プランを立てる</button>
       </div>
     </form>
+
+    <!-- ローディングモーダル -->
+    <div class="loading-modal" id="loadingModal">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">旅行プランを作成中...</div>
+        <div class="loading-subtext" id="loadingSubtext">
+          AIが目的地の情報を検索し、最適な旅行プランを作成しています。<br />
+          しばらくお待ちください。
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("travelForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault(); // フォームのデフォルト送信を防止
+
+          const form = e.target;
+          const submitBtn = document.getElementById("submitBtn");
+          const loadingModal = document.getElementById("loadingModal");
+          const loadingText = document.getElementById("loadingText");
+          const loadingSubtext = document.getElementById("loadingSubtext");
+
+          // フォームの値を取得
+          const destination = form.querySelector(
+            'textarea[name="query"]'
+          ).value;
+          const departure = form.querySelector('input[name="departure"]').value;
+          const stayDays = form.querySelector('select[name="stay_days"]').value;
+          const depth = form.querySelector('select[name="depth"]').value;
+
+          // ローディングメッセージを動的に更新
+          let message = `「${destination}」の旅行プランを作成中...`;
+          if (departure) {
+            message = `「${departure}」から「${destination}」への${stayDays}日間の旅行プランを作成中...`;
+          }
+
+          loadingText.textContent = message;
+
+          // 検索深度に応じたサブメッセージ
+          if (depth === "advanced") {
+            loadingSubtext.innerHTML = `
+            AIが詳細な情報を網羅的に検索し、<br>
+            最適な旅行プランを作成しています。<br>
+            時間がかかる場合があります。
+          `;
+          } else {
+            loadingSubtext.innerHTML = `
+            AIが目的地の情報を検索し、<br>
+            最適な旅行プランを作成しています。<br>
+            しばらくお待ちください。
+          `;
+          }
+
+          // ローディングモーダルを表示
+          loadingModal.style.display = "flex";
+
+          // ボタンを無効化
+          submitBtn.disabled = true;
+          submitBtn.textContent = "作成中...";
+
+          // 少し遅延を入れてからフォームを送信（ローディングモーダルが確実に表示されるように）
+          setTimeout(() => {
+            form.submit();
+          }, 100);
+        });
+
+      // ページ読み込み時にローディングモーダルを非表示
+      window.addEventListener("load", function () {
+        document.getElementById("loadingModal").style.display = "none";
+      });
+    </script>
   </body>
 </html>

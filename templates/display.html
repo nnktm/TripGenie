@@ -3,120 +3,65 @@
   <head>
     <meta charset="utf-8" />
     <title>旅行プラン結果</title>
-    <style>
-      body {
-        font-family: sans-serif;
-        margin: 24px;
-        line-height: 1.6;
-      }
-      .container {
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-      h1 {
-        color: #2c3e50;
-        border-bottom: 3px solid #3498db;
-        padding-bottom: 10px;
-      }
-      .result-section {
-        background: #f8f9fa;
-        padding: 20px;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-        margin-bottom: 20px;
-      }
-      .result-section h2 {
-        margin-top: 0;
-        color: #495057;
-        font-size: 20px;
-      }
-      pre {
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        background: #ffffff;
-        padding: 16px;
-        border-radius: 6px;
-        border: 1px solid #dee2e6;
-        font-size: 14px;
-        line-height: 1.5;
-        overflow-x: auto;
-      }
-      .download-section {
-        background: #e8f5e8;
-        padding: 16px;
-        border-radius: 6px;
-        border: 1px solid #c3e6c3;
-        margin: 20px 0;
-      }
-      .download-section h3 {
-        margin-top: 0;
-        color: #2d5a2d;
-      }
-      a.dl {
-        display: inline-block;
-        background: #28a745;
-        color: white;
-        padding: 10px 20px;
-        text-decoration: none;
-        border-radius: 4px;
-        font-weight: bold;
-        margin-top: 8px;
-      }
-      a.dl:hover {
-        background: #218838;
-      }
-      .back-link {
-        margin-top: 30px;
-        padding: 15px;
-        background: #f8f9fa;
-        border-radius: 6px;
-        text-align: center;
-      }
-      .back-link a {
-        color: #007bff;
-        text-decoration: none;
-        font-weight: bold;
-      }
-      .back-link a:hover {
-        text-decoration: underline;
-      }
-      .no-result {
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        color: #856404;
-        padding: 16px;
-        border-radius: 6px;
-        text-align: center;
-      }
-      .section-card {
-        background: #ffffff;
-        border: 1px solid #e9ecef;
-        border-radius: 6px;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      }
-      .section-title {
-        color: #3498db;
-        border-bottom: 1px solid #e9ecef;
-        padding-bottom: 8px;
-        margin-top: 0;
-        font-size: 18px;
-      }
-      .section-content {
-        margin-top: 10px;
-        line-height: 1.6;
-      }
-      .content-line {
-        margin-bottom: 5px;
-      }
-    </style>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="container">
       <h1>🎯 旅行プラン結果</h1>
 
-      {% if structured_data and structured_data.sections %}
+      {% if travel_info %}
+      <div class="travel-header">
+        <h2>{{ travel_info.destination }} 旅行プラン</h2>
+        <div class="travel-details">
+          {% if travel_info.departure %}
+          <div class="travel-detail-item">
+            🚄 出発地: {{ travel_info.departure }}
+          </div>
+          {% endif %}
+          <div class="travel-detail-item">
+            📅 期間: {{ travel_info.date_range }}
+          </div>
+          <div class="travel-detail-item">
+            🏨 宿泊: {{ travel_info.stay_days }}日間
+          </div>
+          <div class="travel-detail-item">
+            🎯 タイプ: {{ travel_info.travel_type }}
+          </div>
+        </div>
+      </div>
+      {% endif %} {% if structured_data %}
+      <!-- 構造化されたデータの表示 -->
+      <div class="result-section">
+        <h2>📋 旅行プラン概要</h2>
+        <div class="info-grid">
+          <div class="info-card">
+            <h3><span class="icon">🌤️</span> 天気情報</h3>
+            <p>{{ structured_data.weather }}</p>
+          </div>
+          <div class="info-card">
+            <h3><span class="icon">🎉</span> イベント情報</h3>
+            <p>{{ structured_data.events }}</p>
+          </div>
+          <div class="info-card">
+            <h3><span class="icon">🚇</span> 交通手段</h3>
+            <p>{{ structured_data.transportation }}</p>
+          </div>
+          <div class="info-card">
+            <h3><span class="icon">🏨</span> 宿泊情報</h3>
+            <p>{{ structured_data.accommodation }}</p>
+          </div>
+        </div>
+      </div>
+
+      {% if structured_data.tips %}
+      <div class="result-section">
+        <h2>💡 旅行のコツ</h2>
+        <div class="tips-card">
+          <p>{{ structured_data.tips }}</p>
+        </div>
+      </div>
+      {% endif %} {% endif %} {% if structured_data and structured_data.sections
+      %}
       <div class="result-section">
         <h2>📖 PDFの内容（読みやすい形式）</h2>
         {% for section in structured_data.sections %}
@@ -143,6 +88,34 @@
         </div>
         {% endfor %}
       </div>
+      {% endif %} {% if structured_data and structured_data.schedule %}
+      <div class="result-section">
+        <h2>🗺️ 訪れる予定の観光地</h2>
+        <div class="schedule-section">
+          {% for day in structured_data.schedule %}
+          <div class="schedule-day">
+            <div class="day-header">{{ day.day }}日目</div>
+            <div class="day-activities">
+              {% for activity in day.activities %}
+              <div class="activity-item">
+                <div class="activity-time">{{ activity.time }}</div>
+                <div class="activity-details">
+                  <h4>{{ activity.location }}</h4>
+                  <p>{{ activity.activity }}</p>
+                  {% if activity.details and activity.details !=
+                  activity.activity %}
+                  <p style="color: #888; font-size: 13px">
+                    {{ activity.details }}
+                  </p>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
       {% endif %} {% if result_text %}
       <div class="result-section">
         <h2>📝 詳細な旅行プラン</h2>
@@ -154,9 +127,21 @@
       </div>
       {% endif %} {% if pdf_url %}
       <div class="download-section">
-        <h3>📄 PDFダウンロード</h3>
-        <p>旅行プランがPDFファイルとして作成されました。</p>
-        <a class="dl" href="{{ pdf_url }}">📥 PDFをダウンロード</a>
+        <h3>📄 旅行プランPDF</h3>
+        <p>
+          旅行プランをPDFとして保存しました。以下のリンクからダウンロードできます。
+        </p>
+        <a class="dl" href="{{ pdf_url }}">📥 旅行プランPDFをダウンロード</a>
+        <p
+          style="
+            margin-top: 20px;
+            font-size: 18px;
+            color: #28a745;
+            font-weight: bold;
+          "
+        >
+          🎉 旅行を楽しんでください！
+        </p>
       </div>
       {% else %}
       <div class="result-section">
