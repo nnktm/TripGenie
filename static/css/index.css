@@ -65,7 +65,7 @@ textarea {
   border-radius: 8px;
   border: 1px solid #e9ecef;
   margin-bottom: 16px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .travel-info h3 {
@@ -87,7 +87,7 @@ textarea {
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .options-row {
     flex-direction: column;
     align-items: stretch;
@@ -213,7 +213,7 @@ h1 {
   text-align: center;
   margin-bottom: 30px;
   font-size: 2.5em;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* フォーム全体のスタイル */
@@ -223,7 +223,7 @@ h1 {
   background: white;
   padding: 30px;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* 入力フィールドのフォーカス時のスタイル */
@@ -232,7 +232,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 /* レスポンシブデザインの改善 */
@@ -240,12 +240,136 @@ select:focus {
   body {
     margin: 12px;
   }
-  
+
   #travelForm {
     padding: 20px;
   }
-  
+
   h1 {
     font-size: 2em;
+  }
+}
+
+/* 写真表示セクションのスタイル */
+.photos-section {
+  margin-bottom: 30px;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.photos-section h2 {
+  color: #007bff;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.8em;
+}
+
+.photos-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.photo-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: 30%;
+  min-width: 200px;
+}
+
+.photo-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.photo-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.destination-photo {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.3s ease;
+  aspect-ratio: 16/9;
+}
+
+.photo-card:hover .destination-photo {
+  transform: scale(1.05);
+}
+
+.photo-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  color: white;
+  padding: 15px;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.photo-card:hover .photo-overlay {
+  transform: translateY(0);
+}
+
+.photo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.location-name {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.photographer {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.photo-credit {
+  text-align: center;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.photo-credit a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.photo-credit a:hover {
+  text-decoration: underline;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .photo-card {
+    width: 45%;
+  }
+
+  .photos-section {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .photo-card {
+    width: 100%;
   }
 }
