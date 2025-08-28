@@ -1,231 +1,196 @@
+
 /* 全体設定 */
 body {
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  background: #f5f7fa;
-  color: #333;
-  margin: 0;
-  padding: 0;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: #f5f7fa;
+    color: #333;
+    margin: 0;
+    padding: 0;
 }
-
 .container {
-  max-width: 1000px;
-  margin: 40px auto;
-  padding: 20px;
-  background: #fff;
-  border-radius: 15px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
-
 /* 見出し */
-h1,
-h2,
-h3,
-h4 {
-  margin: 10px 0;
+h1, h2, h3, h4 {
+    margin: 10px 0;
 }
-
 h1 {
-  text-align: center;
-  font-size: 2.5em;
-  color: #000000;
+    text-align: center;
+    font-size: 2.5em;
+    color:  #000000;
 }
-
 h2 {
-  font-size: 1.8em;
-  margin-bottom: 15px;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 5px;
+    font-size: 1.8em;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 5px;
 }
-
 h3 {
-  font-size: 1.3em;
+    font-size: 1.3em;
 }
-
 /* 旅行ヘッダー */
 .travel-header {
-  background: #e9f5ff;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
+    background: #e9f5ff;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
 }
-
 .travel-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
 }
-
 .travel-detail-item {
-  background: #fff;
-  padding: 10px 15px;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  flex: 1 1 200px;
-  font-weight: 500;
+    background: #fff;
+    padding: 10px 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    flex: 1 1 200px;
+    font-weight: 500;
 }
-
 /* 情報カード */
 .result-section {
-  margin-bottom: 30px;
+    margin-bottom: 30px;
 }
-
 .info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
 }
-
 .info-card {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-
 .info-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
 }
-
 .info-card h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
 }
-
 .info-card p {
-  color: #555;
+    color: #555;
 }
-
 /* ヒントカード */
 .tips-card {
-  background: #fff8e1;
-  padding: 15px 20px;
-  border-radius: 12px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-  font-size: 1em;
+    background: #fff8e1;
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    font-size: 1em;
 }
-
 /* PDF・スケジュール */
 .schedule-section {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
-
 .schedule-day {
-  background: #f0f8ff;
-  padding: 15px 20px;
-  border-radius: 12px;
+    background: #f0f8ff;
+    padding: 15px 20px;
+    border-radius: 12px;
 }
-
 .day-header {
-  font-weight: bold;
-  font-size: 1.2em;
-  margin-bottom: 10px;
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-bottom: 10px;
 }
-
 .activity-item {
-  display: flex;
-  gap: 15px;
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
+    display: flex;
+    gap: 15px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
 }
-
 .activity-item:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
-
 .activity-time {
-  font-weight: bold;
-  color: #007bff;
-  width: 70px;
-  flex-shrink: 0;
+    font-weight: bold;
+    color: #007bff;
+    width: 70px;
+    flex-shrink: 0;
 }
-
 .activity-details h4 {
-  margin: 0;
-  font-size: 1em;
+    margin: 0;
+    font-size: 1em;
 }
-
 .activity-details p {
-  margin: 2px 0;
-  font-size: 0.9em;
-  color: #555;
+    margin: 2px 0;
+    font-size: 0.9em;
+    color: #555;
 }
-
 /* PDFダウンロード */
 .download-section {
-  text-align: center;
-  padding: 20px;
-  background: #add8e6;
-  border-radius: 12px;
+    text-align: center;
+    padding: 20px;
+    background: #ADD8E6;
+    border-radius: 12px;
 }
-
 .download-section a.dl {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 10px 25px;
-  background: #6495ed;
-  color: #000000;
-  font-weight: bold;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: background 0.3s ease;
+    display: inline-block;
+    margin-top: 10px;
+    padding: 10px 25px;
+    background: #6495ED;
+    color: #000000;
+    font-weight: bold;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.3s ease;
 }
-
 .download-section a.dl:hover {
-  background: #218838;
+    background: #282188;
 }
-
 /* セクション内のカード */
 .section-card {
-  background: #fff;
-  padding: 15px 20px;
-  margin-bottom: 15px;
-  border-radius: 12px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    background: #fff;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
 }
-
 .section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-
 /* 詳細テキスト */
 pre {
-  background: #f7f7f7;
-  padding: 15px;
-  border-radius: 10px;
-  overflow-x: auto;
+    background: #f7f7f7;
+    padding: 15px;
+    border-radius: 10px;
+    overflow-x: auto;
 }
-
 /* バックリンク */
 .back-link {
-  text-align: center;
-  margin-top: 30px;
+    text-align: center;
+    margin-top: 30px;
 }
-
 .back-link a {
-  color: #007bff;
-  text-decoration: none;
-  font-weight: bold;
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
 }
-
 .back-link a:hover {
-  text-decoration: underline;
+    text-decoration: underline;
 }
-
 /* 結果なし */
 .no-result {
-  text-align: center;
-  padding: 20px;
-  background: #fff3f3;
-  border-radius: 12px;
-  color: #d9534f;
-  font-weight: bold;
+    text-align: center;
+    padding: 20px;
+    background: #fff3f3;
+    border-radius: 12px;
+    color: #d9534f;
+    font-weight: bold;
 }
