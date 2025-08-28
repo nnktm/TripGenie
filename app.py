@@ -110,7 +110,7 @@ def call_tavily_search(query, depth="basic", max_results=3, include_answer=False
         
         # 特定のエラーコードに対する詳細な説明
         if e.response.status_code == 432:
-            raise RuntimeError(f"Tavily API エラー (432): リクエストパラメータが無効です。詳細: {error_detail}")
+            raise RuntimeError(f"Tavily API エラー (432): リクエスト上限です。詳細: {error_detail}")
         elif e.response.status_code == 401:
             raise RuntimeError("Tavily API エラー (401): APIキーが無効です。APIキーを確認してください。")
         elif e.response.status_code == 429:
