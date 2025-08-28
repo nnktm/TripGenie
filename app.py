@@ -492,10 +492,19 @@ def display():
         print(f"写真取得エラー: {str(e)}")
         photos_data = {}
 
+    # travel_infoとstructured_dataを定義
+    travel_info = {
+        "departure": departure if departure else None,
+        "date_range": date_range,
+        "stay_days": stay_days,
+        "travel_type": travel_type
+    }
+
     return render_template("display.html", 
                          result_text=result_text, 
                          pdf_url=pdf_url,
                          photos_data=photos_data,
+                         travel_info=travel_info,
                          destination=topic)
 
 @app.route("/download/<path:filename>")
