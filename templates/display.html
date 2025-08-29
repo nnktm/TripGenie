@@ -16,7 +16,9 @@
         color: #2c2c2c;
         line-height: 1.9;
       }
-      h1, h2, h3 {
+      h1,
+      h2,
+      h3 {
         font-family: "Playfair Display", "Noto Serif JP", serif;
         letter-spacing: 1px;
         color: #2a2a2a;
@@ -33,7 +35,7 @@
     <div class="max-w-6xl mx-auto p-12">
       <!-- ヘッダー -->
       <h1 class="text-4xl md:text-5xl font-bold mb-16 text-center accent">
-         あなたの旅行プラン 
+        あなたの旅行プラン
       </h1>
 
       <!-- 写真ギャラリー -->
@@ -45,8 +47,9 @@
           📸 {{ destination }} の写真
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {% set photo_count = 0 %} {% for location, photos in photos_data.items()
-          %} {% for photo in photos %} {% if photo_count < 3 %}
+          {% set photo_count = 0 %} {% for location, photos in
+          photos_data.items() %} {% for photo in photos %} {% if photo_count < 3
+          %}
           <div
             class="group rounded-xl overflow-hidden bg-white border border-gray-200 hover:shadow-lg transition"
           >
@@ -88,11 +91,13 @@
         >
           {% if travel_info.departure %}
           <div>
-            🚄 出発地: <span class="font-semibold">{{ travel_info.departure }}</span>
+            🚄 出発地:
+            <span class="font-semibold">{{ travel_info.departure }}</span>
           </div>
           {% endif %}
           <div>
-            📅 期間: <span class="font-semibold">{{ travel_info.date_range }}</span>
+            📅 期間:
+            <span class="font-semibold">{{ travel_info.date_range }}</span>
           </div>
           <div>
             🏨 宿泊:
@@ -106,47 +111,86 @@
       </section>
       {% endif %}
 
-      <!-- 詳細情報 -->
-      {% if structured_data %}
-      <section class="mb-16">
-        <h2 class="text-2xl font-bold mb-8 accent">📋 詳細情報</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div class="bg-white rounded-xl shadow p-6 border border-gray-200">
-            <h3 class="text-lg font-semibold mb-2 text-gray-900">🌤️ 天気</h3>
-            <p class="text-gray-700">{{ structured_data.weather }}</p>
+      <!-- おすすめ観光地 -->
+      {% if structured_data.schedule %}
+      <section
+        class="mb-16 bg-white shadow-md rounded-2xl p-10 border border-gray-200"
+      >
+        <h3 class="text-xl font-semibold mb-4 text-gray-900">
+          🗺️ おすすめ観光地・スケジュール
+        </h3>
+        <div class="bg-white rounded-xl shadow p-6 border border-gray-200">
+          {% for day_schedule in structured_data.schedule %}
+          <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+            <h4 class="font-semibold text-lg mb-2">
+              {{ day_schedule.day }}日目
+            </h4>
+            {% if day_schedule.activities %}
+            <ul class="space-y-2">
+              {% for activity in day_schedule.activities %}
+              <li class="flex items-start gap-3">
+                <span class="text-sm text-gray-500 min-w-[80px]"
+                  >{{ activity.time }}</span
+                >
+                <div>
+                  <span class="font-medium">{{ activity.location }}</span>
+                  {% if activity.details %}
+                  <p class="text-sm text-gray-600 mt-1">
+                    {{ activity.details }}
+                  </p>
+                  {% endif %}
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-gray-600">
+              詳細なスケジュールは本文をご確認ください
+            </p>
+            {% endif %}
           </div>
-          <div class="bg-white rounded-xl shadow p-6 border border-gray-200">
-            <h3 class="text-lg font-semibold mb-2 text-gray-900">🎉 イベント</h3>
-            <p class="text-gray-700">{{ structured_data.events }}</p>
-          </div>
-          <div class="bg-white rounded-xl shadow p-6 border border-gray-200">
-            <h3 class="text-lg font-semibold mb-2 text-gray-900">🚇 交通</h3>
-            <p class="text-gray-700">{{ structured_data.transportation }}</p>
-          </div>
-          <div class="bg-white rounded-xl shadow p-6 border border-gray-200">
-            <h3 class="text-lg font-semibold mb-2 text-gray-900">🏨 宿泊</h3>
-            <p class="text-gray-700">{{ structured_data.accommodation }}</p>
-          </div>
+          {% endfor %}
         </div>
       </section>
       {% endif %}
 
-      <!-- PDFダウンロード -->
-      {% if pdf_url %}
+      <!-- PDF生成・ダウンロード -->
       <section
         class="mb-16 text-center bg-white rounded-2xl p-12 shadow-md border border-gray-200"
       >
         <h3 class="text-2xl font-bold mb-4 accent">📄 旅行プランPDF</h3>
-        <p class="mb-6 text-gray-700">旅行プランをPDFとして保存しました。</p>
-        <a
-          href="{{ pdf_url }}"
-          class="inline-block bg-[#bfa35a] text-white text-lg font-semibold px-10 py-4 rounded-xl shadow hover:bg-[#a88f4d] transition"
+        <p class="mb-6 text-gray-700">旅行プランの詳細をPDFとして保存する</p>
+
+        <!-- PDF生成ボタン -->
+        <button
+          id="generatePdfBtn"
+          class="inline-block bg-[#bfa35a] text-white text-lg font-semibold px-10 py-4 rounded-xl shadow hover:bg-[#a88f4d] transition cursor-pointer"
         >
-          📥 ダウンロード
-        </a>
+          🔄 PDFを生成
+        </button>
+
+        <!-- PDFダウンロードリンク（生成後に表示） -->
+        <div id="pdfDownloadSection" class="hidden mt-6">
+          <a
+            id="pdfDownloadLink"
+            href="#"
+            class="inline-block bg-green-600 text-white text-lg font-semibold px-10 py-4 rounded-xl shadow hover:bg-green-700 transition"
+          >
+            📥 PDFをダウンロード
+          </a>
+          <p class="mt-4 text-sm text-gray-600">PDFが正常に生成されました</p>
+        </div>
+
+        <!-- エラーメッセージ -->
+        <div
+          id="pdfError"
+          class="hidden mt-4 p-4 bg-red-100 text-red-700 rounded-lg"
+        >
+          <p>PDF生成中にエラーが発生しました。もう一度お試しください。</p>
+        </div>
+
         <p class="mt-6 text-lg text-gray-900 font-bold">🎉 素敵な旅を！</p>
       </section>
-      {% endif %}
 
       <!-- 戻るリンク -->
       <div class="text-center mt-12">
@@ -158,5 +202,79 @@
         </a>
       </div>
     </div>
+
+    <!-- PDF生成用のJavaScript -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("DOMContentLoaded イベントが発火しました");
+
+        const generatePdfBtn = document.getElementById("generatePdfBtn");
+        const pdfDownloadSection =
+          document.getElementById("pdfDownloadSection");
+        const pdfDownloadLink = document.getElementById("pdfDownloadLink");
+        const pdfError = document.getElementById("pdfError");
+
+        console.log("PDF生成ボタン:", generatePdfBtn);
+        console.log("PDFダウンロードセクション:", pdfDownloadSection);
+        console.log("PDFダウンロードリンク:", pdfDownloadLink);
+        console.log("PDFエラー:", pdfError);
+
+        // 旅行プランのテキストを取得（結果表示部分から）
+        const resultText = `{{ result_text | safe }}`;
+        console.log("結果テキスト:", resultText);
+
+        if (generatePdfBtn) {
+          generatePdfBtn.addEventListener("click", async function () {
+            console.log("PDF生成ボタンがクリックされました");
+
+            // ボタンを無効化してローディング状態に
+            generatePdfBtn.disabled = true;
+            generatePdfBtn.textContent = "🔄 生成中...";
+            generatePdfBtn.classList.add("opacity-50");
+
+            // エラーメッセージを非表示
+            pdfError.classList.add("hidden");
+
+            try {
+              const response = await fetch("/generate_pdf", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  text: resultText,
+                  title: "{{ destination }}旅行プラン",
+                }),
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                // PDF生成成功
+                pdfDownloadLink.href = data.pdf_url;
+                pdfDownloadSection.classList.remove("hidden");
+                generatePdfBtn.classList.add("hidden"); // 生成ボタンを非表示
+              } else {
+                // エラーが発生
+                throw new Error(data.error || "PDF生成に失敗しました");
+              }
+            } catch (error) {
+              console.error("PDF生成エラー:", error);
+              pdfError.classList.remove("hidden");
+              pdfError.querySelector(
+                "p"
+              ).textContent = `PDF生成中にエラーが発生しました: ${error.message}`;
+
+              // ボタンを元の状態に戻す
+              generatePdfBtn.disabled = false;
+              generatePdfBtn.textContent = "🔄 PDFを生成";
+              generatePdfBtn.classList.remove("opacity-50");
+            }
+          });
+        } else {
+          console.error("PDF生成ボタンが見つかりません");
+        }
+      });
+    </script>
   </body>
 </html>

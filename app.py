@@ -134,9 +134,24 @@ def save_text_as_pdf(text: str, out_dir: str = "outputs_pdf", title: str = "LLM�
     doc.build(story)
     return out_path
 
+def save_text_as_summary(text: str, out_dir: str = "outputs_summary", title: str = "LLM出力") -> str:
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    head = _sanitize_filename((text or "output").splitlines()[0])
+    filename = f"{datetime.now():%Y%m%d-%H%M%S}_{head}.txt"
+    out_path = str(Path(out_dir) / filename)
+
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(text)
+    return out_path
+
+
 # Function Calling から呼びやすい薄いラッパ
 def save_pdf(text: str, title: str = "LLM出力", out_dir: str = "outputs_pdf") -> dict:
     return {"path": save_text_as_pdf(text, out_dir=out_dir, title=title)}
+
+# === 要約ツール ===
+def save_summary(text: str, title: str = "LLM出力", out_dir: str = "outputs_summary") -> dict:
+    return {"path": save_text_as_summary(text, out_dir=out_dir, title=title)}
 
 # === Tavily 検索 ===
 def call_tavily_search(query, depth="basic", max_results=3, include_answer=False):
@@ -247,6 +262,23 @@ function_descriptions = [
     {
         "type": "function",
         "function": {
+            "name": "save_summary",
+            "description": "与えられたテキストを要約として保存し、保存先パスを返す。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text":  {"type": "string", "description": "要約として保存する本文（日本語可）"},
+                    "title": {"type": "string", "description": "要約のタイトル", "default": "旅行プラン要約"},
+                    "out_dir": {"type": "string", "description": "保存先ディレクトリ", "default": "outputs_summary"}
+                },
+                "required": ["text"],
+                "additionalProperties": False
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "save_pdf",
             "description": "与えられたテキストをPDFに保存し、保存先パスを返す。",
             "parameters": {
@@ -279,6 +311,12 @@ def execute_function(call):
                 args.get("include_answer", False),
             )
         }
+    if name == "save_summary":
+        return save_summary(
+            text=args.get("text", ""),
+            title=args.get("title", "旅行プラン要約"),
+            out_dir=args.get("out_dir", "outputs_summary"),
+        )
     if name == "save_pdf":
         return save_pdf(
             text=args.get("text", ""),
@@ -290,13 +328,14 @@ def execute_function(call):
 def run_agent(messages, tools, max_steps=5):
     """LLMに考えさせ→必要ならツールを実行→結果を渡して続き、を最大N回繰り返す。"""
     pdf_path = None
+    summary_path = None
     for step in range(max_steps):
         res = client.chat.completions.create(model="gpt-4o-mini", messages=messages, tools=tools)
         m = res.choices[0].message
 
         # ツール不要なら最終回答
         if not getattr(m, "tool_calls", None):
-            return m.content, pdf_path
+            return m.content, pdf_path, summary_path
 
         # 要求されたツールを全部こなして結果を返す
         messages.append(m.model_dump())  # LLMの"ツール使います"発言も履歴に残す
@@ -305,6 +344,9 @@ def run_agent(messages, tools, max_steps=5):
             # save_pdf の結果からパスを捕捉
             if call.function.name == "save_pdf" and isinstance(out, dict) and "path" in out:
                 pdf_path = out["path"]
+            # save_summary の結果からパスを捕捉
+            elif call.function.name == "save_summary" and isinstance(out, dict) and "path" in out:
+                summary_path = out["path"]
 
             messages.append(
                 {
@@ -314,7 +356,7 @@ def run_agent(messages, tools, max_steps=5):
                     "content": json.dumps(out, ensure_ascii=False)
                 }
             )
-    return "(ステップ上限に達しました)", pdf_path
+    return "(ステップ上限に達しました)", pdf_path, summary_path
 
 # === Flask ===
 app = Flask(__name__)
@@ -371,9 +413,9 @@ def display():
     system_msg = {"role": "system", "content": "あなたは旅行のプロです。指定された条件（出発地、目的地、宿泊日数、日付）に基づいて、実用的で詳細な旅行プランを作成してください。所要時間や移動時間、宿泊施設なども考慮してください。"}
     
     user_msg = {
-        "role": "user",
-        "content": f"""
-{travel_description}について以下を段階的に詳しく調べ、必要に応じてWeb検索ツールを使い、最後にPDFとして保存してください。
+         "role": "user",
+         "content": f"""
+{travel_description}について以下を段階的に詳しく調べ、必要に応じてWeb検索ツールを使い、最後に要約ツール(save_summary)を呼び出してください。
 
 旅行条件:
 - 目的地: {topic}
@@ -388,16 +430,16 @@ def display():
 ・その期間のトレンドやおすすめスポットを調べる
 {f"・{departure}から{topic}までの交通手段と所要時間を調べる" if departure else "・{topic}周辺の移動手段と所要時間を調べる"}
 ・宿泊施設の情報を調べる（{stay_days}日間の場合）
-・所要時間や移動時間を考慮した{stay_days}日間の詳細なスケジュールを作成
+・所要時間や移動時間を考慮した{stay_days}日間の詳細なスケジュールを作成 
 ・スケジュールにある観光地の写真を3枚分調べる
 
 探索のヒント:
-- まずアウトラインを作り、次に不足点を補うために検索を行い、最終的にPDF保存ツール(save_pdf)を呼び出してください。
+- まずアウトラインを作り、次に不足点を補うために検索を行い、最終的に要約ツール(save_summary)を呼び出してください。
 - 日付に特化した情報（イベント、天気、営業時間など）を重視してください。
 - {stay_days}日間の旅程を考慮した、実現可能なスケジュールを作成してください。
 - どこの観光地に行くのかを明確かつ具体的にスケジュールを作成してください。
 - 移動時間も明記したスケジュールにしてください。
-- 最終的な回答は必ず上記のJSON形式で構造化してください。
+- 最終的な回答は人間が読みやすい形で作成してください。
 - 人間が読みやすい形で、以下の点に注意して作成してください：
   * 各日のスケジュールは時間順に整理
   * 移動時間と所要時間を明確に記載
@@ -406,8 +448,8 @@ def display():
   * 天候に応じた代替プランも提案
   * 予算の目安も含める
   * 注意事項や持ち物も具体的に記載
-"""
-    }
+ """
+     }
 
     # Tavilyの使い方をLLMに伝えるため、1度ツールの説明も埋め込んでおく（任意）
     tool_hint = {
@@ -419,13 +461,10 @@ def display():
     }
 
     messages = [system_msg, user_msg, tool_hint]
-    result_text, pdf_path = run_agent(messages, function_descriptions)
+    result_text, _, summary_path = run_agent(messages, function_descriptions)
 
+    # PDFは自動生成せず、displayページでのみ生成可能にする
     pdf_url = None
-    if pdf_path and Path(pdf_path).exists():
-        # ダウンロードリンクを作る
-        # /download/<filename> で配信
-        pdf_url = url_for("download_file", filename=Path(pdf_path).name)
 
     # 観光地の写真を取得
     photos_data = {}
@@ -491,7 +530,10 @@ def display():
     except Exception as e:
         print(f"写真取得エラー: {str(e)}")
         photos_data = {}
-
+    
+    # 検索結果から要約データを抽出
+    structured_data = extract_structured_data(result_text, topic, date_range, stay_days, departure)
+    
     # travel_infoとstructured_dataを定義
     travel_info = {
         "departure": departure if departure else None,
@@ -505,7 +547,31 @@ def display():
                          pdf_url=pdf_url,
                          photos_data=photos_data,
                          travel_info=travel_info,
-                         destination=topic)
+                         destination=topic,
+                         structured_data=structured_data)
+
+@app.route("/generate_pdf", methods=["POST"])
+def generate_pdf():
+    """displayページからPDF生成リクエストを受け取る"""
+    data = request.get_json()
+    if not data or 'text' not in data:
+        return {"error": "テキストが提供されていません"}, 400
+    
+    try:
+        # PDFを生成
+        pdf_path = save_text_as_pdf(
+            text=data['text'],
+            title=data.get('title', '旅行プラン'),
+            out_dir="outputs_pdf"
+        )
+        
+        # ダウンロード用のURLを生成
+        pdf_url = url_for("download_file", filename=Path(pdf_path).name)
+        
+        return {"success": True, "pdf_url": pdf_url, "filename": Path(pdf_path).name}
+    except Exception as e:
+        return {"error": f"PDF生成エラー: {str(e)}"}, 500
+
 
 @app.route("/download/<path:filename>")
 def download_file(filename):
@@ -519,16 +585,14 @@ def extract_structured_data(text, destination, date_range, stay_days, departure)
         data = {
             "summary": f"{destination}での{stay_days}日間の旅行プラン",
             "weather": extract_weather_info(text),
-            "events": extract_events_info(text),
+            "attractions": extract_attractions_info(text),
+            "trends": extract_trends_info(text),
             "schedule": [],
             "transportation": extract_transportation_info(text, departure, destination),
             "accommodation": extract_accommodation_info(text, stay_days),
             "tips": extract_tips_info(text),
             "sections": []  # セクション別の内容を追加
         }
-        
-        # テキストをセクション別に分割
-        data["sections"] = extract_sections_from_text(text, destination, stay_days)
         
         # 日付ごとのスケジュールを抽出
         data["schedule"] = extract_detailed_schedule(text, destination, date_range, stay_days)
@@ -539,7 +603,8 @@ def extract_structured_data(text, destination, date_range, stay_days, departure)
         return {
             "summary": f"{destination}での{stay_days}日間の旅行プラン",
             "weather": "天気情報",
-            "events": "イベント情報",
+            "attractions": "観光地・アクティビティ情報",
+            "trends": "トレンド・おすすめスポット情報",
             "schedule": [{
                 "day": 1,
                 "date": date_range,
@@ -568,17 +633,29 @@ def extract_weather_info(text):
     
     return "天気情報が含まれています"
 
-def extract_events_info(text):
-    """イベント情報を抽出"""
-    event_keywords = ["イベント", "祭り", "催し", "特別", "期間限定", "開催"]
+def extract_attractions_info(text):
+    """観光地・アクティビティ情報を抽出"""
+    attraction_keywords = ["観光地", "名所", "寺", "神社", "公園", "美術館", "博物館", "城", "温泉", "レストラン", "カフェ", "ショップ", "アクティビティ", "体験"]
     lines = text.split('\n')
     
     for line in lines:
-        if any(keyword in line for keyword in event_keywords):
+        if any(keyword in line for keyword in attraction_keywords):
             if len(line.strip()) > 5:
                 return line.strip()
     
-    return "イベント情報が含まれています"
+    return "観光地・アクティビティ情報が含まれています"
+
+def extract_trends_info(text):
+    """トレンド・おすすめスポット情報を抽出"""
+    trend_keywords = ["トレンド", "おすすめ", "人気", "最新", "話題", "注目", "流行", "ベスト", "ランキング"]
+    lines = text.split('\n')
+    
+    for line in lines:
+        if any(keyword in line for keyword in trend_keywords):
+            if len(line.strip()) > 5:
+                return line.strip()
+    
+    return "トレンド・おすすめスポット情報が含まれています"
 
 def extract_transportation_info(text, departure, destination):
     """交通手段情報を抽出"""
@@ -648,20 +725,18 @@ def extract_detailed_schedule(text, destination, date_range, stay_days):
         
         # 時間情報を含む行を活動として抽出
         if any(keyword in line for keyword in ['時', '分', 'AM', 'PM', '午前', '午後', '〜', 'から']):
-            location = extract_location(line, destination)
-            time_info = extract_time(line)
             details = extract_activity_details(line)
             
             current_activities.append({
-                "time": time_info,
-                "location": location,
+                "time": line,
+                "location": destination,
                 "activity": line,
                 "details": details
             })
         # 観光地やスポット名が含まれる行も抽出
         elif any(keyword in line for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '駅', '通り', '市場', 
-    'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
-    '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ']):
+            'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
+            '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ']):
             if line and len(line) > 3:
                 current_activities.append({
                     "time": "時間未定",
