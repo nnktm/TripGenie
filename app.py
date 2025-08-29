@@ -878,7 +878,6 @@ def extract_detailed_schedule(text, destination, date_range, stay_days):
             '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ']):
             if line and len(line) > 3:
                 current_activities.append({
-                    "time": "時間未定",
                     "location": line,
                     "activity": line,
                     "details": extract_activity_details(line)
