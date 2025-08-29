@@ -425,7 +425,6 @@ def index():
 
 @app.route("/display", methods=["POST", "GET"])
 def display():
-    maps_info = None 
     topic = request.form.get("query")
     departure = request.form.get("departure", "").strip()
     stay_days = int(request.form.get("stay_days", "1"))
@@ -433,60 +432,14 @@ def display():
     depth = request.form.get("depth", "basic")
     include_answer = request.form.get("include_answer") == "on"
     max_results = int(request.form.get("max_results", "3") or 3)
-    # フォームから交通手段を取得
-    travel_mode = request.form.get("travel_mode", "driving")  # デフォルトは車
-    travel_time = request.form.get("departure_time", "09:00")  # HH:MM形式
+    travel_mode = request.form.get("travel_mode", "driving")
+    travel_time = request.form.get("departure_time", "09:00")
 
-    arrival_time_str = None
-
-    if maps_info and "duration_seconds" in maps_info:
-        jst = timezone(timedelta(hours=9))
-        travel_datetime = datetime.strptime(travel_date + " " + travel_time, "%Y-%m-%d %H:%M").replace(tzinfo=jst)
-        arrival_datetime = travel_datetime + timedelta(seconds=maps_info["duration_seconds"])
-        arrival_time_str = arrival_datetime.strftime("%Y-%m-%d %H:%M")
-
+    # Initialize variables to avoid NameError
+    maps_info = None
     maps_text = None
     maps_embed_url = None
-    if departure:
-        maps_info = None
-        maps_text = None
-        maps_embed_url = None
-        arrival_time_str = None  
-
-        if travel_mode == "transit" and departure:
-            # 公共交通機関は経路テキストのみ
-            jst = timezone(timedelta(hours=9))
-            travel_datetime = datetime.strptime(travel_date + " " + travel_time, "%Y-%m-%d %H:%M")
-            travel_datetime = travel_datetime.replace(tzinfo=jst)
-            departure_timestamp = int(travel_datetime.timestamp())
-            maps_info = get_google_maps_route(departure, topic, mode="transit", departure_time=departure_timestamp)
-        else:
-            # 徒歩・車はマップ表示
-            maps_info = get_google_maps_route(departure, topic, mode=travel_mode)
-
-        if maps_info and "error" not in maps_info:
-            # 経路概要のみ
-            maps_text = (
-                f"出発地: {maps_info['start_address']}\n"
-                f"目的地: {maps_info['end_address']}\n"
-                f"総距離: {maps_info['distance']}\n"
-                f"所要時間: {maps_info['duration']}\n"
-            )
-
-
-        # 徒歩・車のみ埋め込みマップURL生成
-            if travel_mode in ["driving", "walking"]:
-                origin = urllib.parse.quote(departure)
-                destination = urllib.parse.quote(topic)
-                maps_embed_url = (
-                    f"https://www.google.com/maps/embed/v1/directions"
-                    f"?key={os.getenv('GOOGLE_MAPS_API_KEY')}"
-                    f"&origin={origin}&destination={destination}&mode={travel_mode}"
-                )
-        else:
-            maps_text = maps_info.get("error") if maps_info else "経路情報が取得できません"
-
-
+    arrival_time_str = None
 
     if not topic:
         return render_template("display.html", result_text="目的地を入力してください。", pdf_url=None)
@@ -494,14 +447,51 @@ def display():
     if not travel_date:
         return render_template("display.html", result_text="旅行開始日を入力してください。", pdf_url=None)
 
-    # 日付を日本語形式に変換
+    # --- Maps API Logic ---
+    if departure:
+        if travel_mode == "transit" and departure:
+            jst = timezone(timedelta(hours=9))
+            travel_datetime = datetime.strptime(travel_date + " " + travel_time, "%Y-%m-%d %H:%M")
+            travel_datetime = travel_datetime.replace(tzinfo=jst)
+            departure_timestamp = int(travel_datetime.timestamp())
+            maps_info = get_google_maps_route(departure, topic, mode="transit", departure_time=departure_timestamp)
+        else:
+            maps_info = get_google_maps_route(departure, topic, mode=travel_mode)
+
+        if maps_info and "error" not in maps_info:
+            maps_text = (
+                f"出発地: {maps_info['start_address']}\n"
+                f"目的地: {maps_info['end_address']}\n"
+                f"総距離: {maps_info['distance']}\n"
+                f"所要時間: {maps_info['duration']}\n"
+            )
+            
+            if travel_mode in ["driving", "walking", "bicycling"]:
+                origin = urllib.parse.quote(departure)
+                destination = urllib.parse.quote(topic)
+                # Correct the Google Maps embed URL
+                maps_embed_url = (
+                    f"https://www.google.com/maps/embed/v1/directions"
+                    f"?key={os.getenv('GOOGLE_MAPS_API_KEY')}"
+                    f"&origin={origin}&destination={destination}&mode={travel_mode}"
+                )
+
+            # Calculate arrival time
+            if "duration_seconds" in maps_info:
+                jst = timezone(timedelta(hours=9))
+                travel_datetime = datetime.strptime(travel_date + " " + travel_time, "%Y-%m-%d %H:%M").replace(tzinfo=jst)
+                arrival_datetime = travel_datetime + timedelta(seconds=maps_info["duration_seconds"])
+                arrival_time_str = arrival_datetime.strftime("%Y年%m月%d日 %H:%M")
+        else:
+            maps_text = maps_info.get("error") if maps_info else "経路情報が取得できません"
+
+    # --- Date Formatting Logic ---
     try:
         date_obj = datetime.strptime(travel_date, "%Y-%m-%d")
         formatted_date = date_obj.strftime("%Y年%m月%d日")
         day_of_week = ["月", "火", "水", "木", "金", "土", "日"][date_obj.weekday()]
         formatted_date_with_day = f"{formatted_date}({day_of_week})"
         
-        # 宿泊日数に応じて終了日を計算
         if stay_days > 1:
             end_date_obj = date_obj + timedelta(days=stay_days-1)
             end_date = end_date_obj.strftime("%Y年%m月%d日")
@@ -510,11 +500,10 @@ def display():
             date_range = f"{formatted_date_with_day}〜{formatted_end_date}"
         else:
             date_range = formatted_date_with_day
-            
     except ValueError:
         date_range = travel_date
 
-    # 旅行タイプを判定
+    # --- Travel Plan Generation Logic ---
     if departure:
         travel_type = "出発地から目的地への旅行"
         travel_description = f"{departure}から{topic}への{stay_days}日間の旅行プラン"
@@ -522,12 +511,11 @@ def display():
         travel_type = "目的地中心の旅行"
         travel_description = f"{topic}での{stay_days}日間の旅行プラン"
 
-    # プロンプト（出発地・宿泊日数を考慮した旅行プラン作成）
     system_msg = {"role": "system", "content": "あなたは旅行のプロです。指定された条件（出発地、目的地、宿泊日数、日付）に基づいて、実用的で詳細な旅行プランを作成してください。所要時間や移動時間、宿泊施設なども考慮してください。"}
     
     user_msg = {
-         "role": "user",
-         "content": f"""
+        "role": "user",
+        "content": f"""
 {travel_description}について以下を段階的に詳しく調べ、必要に応じてWeb検索ツールを使い、最後に要約ツール(save_summary)を呼び出してください。
 
 旅行条件:
@@ -548,7 +536,7 @@ def display():
 ・その期間のトレンドやおすすめスポットを調べる
 {f"・{departure}から{topic}までの交通手段と所要時間を調べる" if departure else "・{topic}周辺の移動手段と所要時間を調べる"}
 ・宿泊施設の情報を調べる（{stay_days}日間の場合）
-・所要時間や移動時間を考慮した{stay_days}日間の詳細なスケジュールを作成 
+・所要時間や移動時間を考慮した{stay_days}日間の詳細なスケジュールを作成
 ・スケジュールにある観光地の写真を3枚分調べる
 
 探索のヒント:
@@ -566,10 +554,9 @@ def display():
   * 天候に応じた代替プランも提案
   * 予算の目安も含める
   * 注意事項や持ち物も具体的に記載
- """
-     }
+"""
+    }
 
-    # Tavilyの使い方をLLMに伝えるため、1度ツールの説明も埋め込んでおく（任意）
     tool_hint = {
         "role": "user",
         "content": (
@@ -581,65 +568,43 @@ def display():
     messages = [system_msg, user_msg, tool_hint]
     result_text, _, summary_path = run_agent(messages, function_descriptions)
 
-    # PDFは自動生成せず、displayページでのみ生成可能にする
     pdf_url = None
 
-    # 観光地の写真を取得
     photos_data = {}
     try:
-        # 旅行プランから観光地名を抽出
         attractions_from_plan = []
-        
-        # 結果テキストから観光地名を抽出
         lines = result_text.split('\n')
         for line in lines:
             line = line.strip()
             if not line or len(line) < 3:
                 continue
                 
-            # 観光地のキーワードを含む行を検出
-            if any(keyword in line for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '通り', '市場', 
-                'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
-                '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ', '観光', '名所']):
-                
-                # 行から観光地名を抽出（キーワードの前後の文字列を取得）
-                for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '通り', '市場', 
-                    'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川',
-                    '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ']:
+            if any(keyword in line for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '通り', '市場', 'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川', '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ', '観光', '名所']):
+                for keyword in ['寺', '神社', '公園', '美術館', '博物館', '城', '通り', '市場', 'タワー', 'ビル', 'センター', 'プラザ', 'モール', '広場', '橋', '川', '山', '海', '湖', '温泉', 'レストラン', 'カフェ', 'ショップ']:
                     if keyword in line:
-                        # キーワードの前後の文字列を抽出
                         parts = line.split(keyword)
                         for part in parts:
                             part = part.strip()
                             if part and len(part) > 2 and part not in attractions_from_plan:
-                                # 一般的でない文字を除去
                                 clean_part = re.sub(r'[【】「」『』()（）\[\]{}]', '', part)
                                 if clean_part and len(clean_part) > 2:
                                     attractions_from_plan.append(clean_part)
                         break
         
-        # 目的地を最初に追加（出発地は除外）
         attractions_list = [topic]
         attractions_list.extend(attractions_from_plan)
-        
-        # 重複を除去
         attractions_list = list(dict.fromkeys(attractions_list))
         
-        # デバッグ情報を出力
         print(f"旅行プランから検出された観光地: {attractions_list}")
         
-        # 写真を取得（出発地は除外）
         photos_data = get_destination_photos(topic, attractions_list)
         
-        # 写真取得結果を出力
         print(f"取得された写真数: {len(photos_data)}")
         for location, photos in photos_data.items():
             print(f"  - {location}: {len(photos)}枚")
         
-        # 写真が3枚未満の場合は、目的地の写真を追加して3枚にする
         total_photos = sum(len(photos) for photos in photos_data.values())
         if total_photos < 3 and topic in photos_data:
-            # 目的地から追加の写真を取得
             additional_photos = get_unsplash_photo(topic, 3 - total_photos)
             if additional_photos:
                 photos_data[topic].extend(additional_photos)
@@ -649,10 +614,8 @@ def display():
         print(f"写真取得エラー: {str(e)}")
         photos_data = {}
     
-    # 検索結果から要約データを抽出
     structured_data = extract_structured_data(result_text, topic, date_range, stay_days, departure)
     
-    # travel_infoとstructured_dataを定義
     travel_info = {
         "departure": departure if departure else None,
         "date_range": date_range,
@@ -661,56 +624,14 @@ def display():
     }
 
     return render_template("display.html", 
-                         result_text=result_text, 
-                         pdf_url=pdf_url,
-                         photos_data=photos_data,
-                         travel_info=travel_info,
-                         destination=topic,
-                         structured_data=structured_data)
-
-@app.route("/generate_pdf", methods=["POST"])
-def generate_pdf():
-    """displayページからPDF生成リクエストを受け取る"""
-    data = request.get_json()
-    if not data or 'text' not in data:
-        return {"error": "テキストが提供されていません"}, 400
-    
-    try:
-        # PDFを生成
-        pdf_path = save_text_as_pdf(
-            text=data['text'],
-            title=data.get('title', '旅行プラン'),
-            out_dir="outputs_pdf"
-        )
-        
-        # ダウンロード用のURLを生成
-        pdf_url = url_for("download_file", filename=Path(pdf_path).name)
-        
-        return {"success": True, "pdf_url": pdf_url, "filename": Path(pdf_path).name}
-    except Exception as e:
-        return {"error": f"PDF生成エラー: {str(e)}"}, 500
-
-    travel_info = {
-        "destination": topic,
-        "departure": departure,
-        "stay_days": stay_days,
-        "date_range": date_range,
-        "travel_type": travel_type,
-    }    
-
-    structured_data = extract_structured_data(result_text, topic, date_range, stay_days, departure)
-
-
-    return render_template(
-        "display.html",
-        result_text=result_text,
+        result_text=result_text, 
         pdf_url=pdf_url,
-        maps_text=maps_text,           # 追加
-        maps_embed_url=maps_embed_url,  # 追加
-        travel_info=travel_info,           # ←追加
-        structured_data=structured_data    # ←追加
-        )
-
+        photos_data=photos_data,
+        travel_info=travel_info,
+        destination=topic,
+        structured_data=structured_data,
+        maps_text=maps_text,
+        maps_embed_url=maps_embed_url)
 
 @app.route("/download/<path:filename>")
 def download_file(filename):
