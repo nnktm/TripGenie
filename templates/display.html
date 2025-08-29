@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>旅行プラン結果</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
   </head>
   <body>
     <div class="container">
@@ -156,6 +156,23 @@
       <div class="back-link">
         <a href="/">← 新しい旅行プランを作成</a>
       </div>
+
+      {% if maps_text %}
+      <h3>経路情報（{{ travel_info.departure }} → {{ travel_info.destination }}）</h3>
+      <p>出発時刻: {{ request.form.get('departure_time', '09:00') }}</p>
+      <pre>{{ maps_text }}</pre>
+      {% endif %}
+
+      <h3>Google Map</h3>
+      <iframe
+        width="600"
+        height="450"
+        style="border:0"
+        loading="lazy"
+        allowfullscreen
+        referrerpolicy="no-referrer-when-downgrade"
+        src="{{ maps_embed_url }}">
+      </iframe>
     </div>
   </body>
 </html>
