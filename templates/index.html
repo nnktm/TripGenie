@@ -2,12 +2,163 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>旅行プランを検索</title>
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&family=Playfair+Display:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/index.css') }}"
     />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>旅行プランを検索</title>
+    <style>
+      body {
+        font-family: "Noto Serif JP", serif;
+        background-color: #f9f9f6;
+        color: #2c2c2c;
+        line-height: 1.8;
+        margin: 0;
+        padding: 0;
+      }
+      h1, h2, h3 {
+        font-family: "Playfair Display", "Noto Serif JP", serif;
+        color: #2a2a2a;
+        letter-spacing: 1px;
+      }
+      h1 {
+        text-align: center;
+        font-size: 2.5rem;
+        margin: 2rem 0;
+        color: #bfa35a; /* ゴールドアクセント */
+        letter-spacing: 2px;
+      }
+      .form-group, .form-row, .options-row {
+        margin-bottom: 1.5rem;
+      }
+      form {
+        max-width: 720px;
+        margin: 0 auto;
+        background: #ffffff;
+        padding: 2.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        border: 1px solid #e0e0e0;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      textarea, input, select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ccc;
+        border-radius: 0.5rem;
+        font-family: "Noto Serif JP", serif;
+        font-size: 1rem;
+        background: #fdfdfd;
+      }
+      textarea {
+        min-height: 80px;
+      }
+      .form-row {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+      }
+      .form-row > div {
+        flex: 1;
+        min-width: 220px;
+      }
+      .options-row {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-top: 2rem;
+      }
+      button {
+        display: inline-block;
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+        border-radius: 0.75rem;
+        border: none;
+        background: #bfa35a;
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+      button:hover {
+        background: #a88f4d;
+      }
+
+      /* --- ローディングモーダル --- */
+      .loading-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(249, 249, 246, 0.95);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+      .loading-content {
+        text-align: center;
+        background: #fff;
+        padding: 2rem 3rem;
+        border-radius: 1rem;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        border: 1px solid #e0e0e0;
+        max-width: 420px;
+      }
+      .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #ddd;
+        border-top-color: #bfa35a;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1.5rem;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .loading-text {
+        font-weight: bold;
+        margin-bottom: 0.75rem;
+        font-size: 1.1rem;
+        color: #2a2a2a;
+      }
+      .loading-subtext {
+        font-size: 0.95rem;
+        color: #555;
+        margin-bottom: 1.5rem;
+      }
+      .progress-bar {
+        height: 6px;
+        background: #eee;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .progress-fill {
+        width: 60%;
+        height: 100%;
+        background: #bfa35a;
+        animation: progress 2s ease-in-out infinite;
+      }
+      @keyframes progress {
+        0% { width: 20%; }
+        50% { width: 70%; }
+        100% { width: 20%; }
+      }
+    </style>
   </head>
   <body>
     <h1>旅行プランを検索</h1>
@@ -18,14 +169,14 @@
       </div>
 
       <div class="travel-info">
-        <h3>旅行詳細</h3>
+        <h3 class="accent">旅行詳細</h3>
         <div class="form-row">
           <div>
             <label>出発地（任意）</label>
             <input type="text" name="departure" placeholder="例：東京駅" />
-            <small style="color: #6c757d"
-              >※未入力の場合は目的地の中心地から開始</small
-            >
+            <small style="color: #6c757d">
+              ※未入力の場合は目的地の中心地から開始
+            </small>
           </div>
           <div>
             <label>宿泊日数</label>
@@ -43,11 +194,11 @@
         <div class="form-row">
           <div>
             <label>旅行開始日</label>
-            <input type="date" name="travel_date" required />
+            <input type="date" name="travel_date" value="2025-09-01" required />
           </div>
           <div>
             <label>最大件数</label>
-            <input type="number" name="max_results" value="3" min="1" max="5" />
+            <input type="number" name="max_results" value="1" min="1" max="5" />
           </div>
         </div>
       </div>
@@ -105,7 +256,7 @@
       document
         .getElementById("travelForm")
         .addEventListener("submit", function (e) {
-          e.preventDefault(); // フォームのデフォルト送信を防止
+          e.preventDefault();
 
           const form = e.target;
           const submitBtn = document.getElementById("submitBtn");
@@ -113,51 +264,40 @@
           const loadingText = document.getElementById("loadingText");
           const loadingSubtext = document.getElementById("loadingSubtext");
 
-          // フォームの値を取得
-          const destination = form.querySelector(
-            'textarea[name="query"]'
-          ).value;
+          const destination = form.querySelector('textarea[name="query"]').value;
           const departure = form.querySelector('input[name="departure"]').value;
           const stayDays = form.querySelector('select[name="stay_days"]').value;
           const depth = form.querySelector('select[name="depth"]').value;
 
-          // ローディングメッセージを動的に更新
           let message = `「${destination}」の旅行プランを作成中...`;
           if (departure) {
             message = `「${departure}」から「${destination}」への${stayDays}日間の旅行プランを作成中...`;
           }
-
           loadingText.textContent = message;
 
-          // 検索深度に応じたサブメッセージ
           if (depth === "advanced") {
             loadingSubtext.innerHTML = `
-            AIが詳細な情報を網羅的に検索し、<br>
-            最適な旅行プランを作成しています。<br>
-            時間がかかる場合があります。
-          `;
+              AIが詳細な情報を網羅的に検索し、<br>
+              最適な旅行プランを作成しています。<br>
+              時間がかかる場合があります。
+            `;
           } else {
             loadingSubtext.innerHTML = `
-            AIが目的地の情報を検索し、<br>
-            最適な旅行プランを作成しています。<br>
-            しばらくお待ちください。
-          `;
+              AIが目的地の情報を検索し、<br>
+              最適な旅行プランを作成しています。<br>
+              しばらくお待ちください。
+            `;
           }
 
-          // ローディングモーダルを表示
           loadingModal.style.display = "flex";
-
-          // ボタンを無効化
           submitBtn.disabled = true;
           submitBtn.textContent = "作成中...";
 
-          // 少し遅延を入れてからフォームを送信（ローディングモーダルが確実に表示されるように）
           setTimeout(() => {
             form.submit();
           }, 100);
         });
 
-      // ページ読み込み時にローディングモーダルを非表示
       window.addEventListener("load", function () {
         document.getElementById("loadingModal").style.display = "none";
       });
