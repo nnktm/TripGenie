@@ -201,6 +201,23 @@
           ← 新しい旅行プランを作成
         </a>
       </div>
+
+      {% if maps_text %}
+      <h3>経路情報（{{ travel_info.departure }} → {{ travel_info.destination }}）</h3>
+      <p>出発時刻: {{ request.form.get('departure_time', '09:00') }}</p>
+      <pre>{{ maps_text }}</pre>
+      {% endif %}
+
+      <h3>Google Map</h3>
+      <iframe
+        width="600"
+        height="450"
+        style="border:0"
+        loading="lazy"
+        allowfullscreen
+        referrerpolicy="no-referrer-when-downgrade"
+        src="{{ maps_embed_url }}">
+      </iframe>
     </div>
 
     <!-- PDF生成用のJavaScript -->

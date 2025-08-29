@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import json, re, requests
+import urllib.parse
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Flask, request, render_template, send_from_directory, url_for
 
@@ -216,6 +217,63 @@ def call_tavily_search(query, depth="basic", max_results=3, include_answer=False
         print(f"Tavily API リクエストエラー: {str(e)}")
         raise RuntimeError(f"Tavily API リクエストエラー: {str(e)}")
 
+def get_google_maps_route(departure, destination, mode="driving", departure_time=None):
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    if not api_key:
+        return {"error": "GOOGLE_MAPS_API_KEY が設定されていません"}
+
+    base_url = "https://maps.googleapis.com/maps/api/directions/json"
+    params = {
+        "origin": departure,
+        "destination": destination,
+        "mode": mode,
+        "language": "ja",
+        "key": api_key
+    }
+
+    if mode == "transit" and departure_time:
+        params["departure_time"] = departure_time  # タイムスタンプで指定
+
+    url = f"{base_url}?{urllib.parse.urlencode(params)}"
+
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+
+        status = data.get("status")
+        if status != "OK":
+            # ZERO_RESULTS は通常のエラーにせず、'error'で返す
+            if status == "ZERO_RESULTS":
+                return {"error": f"指定された出発地({departure})と目的地({destination})の間に経路が見つかりませんでした"}
+                print("Google Maps API status:", status, "error_message:", data.get("error_message"))
+            else:
+                return {"error": f"Google Maps API エラー: {status} - {data.get('error_message')}"}
+
+        route = data["routes"][0]["legs"][0]
+        duration_seconds = route["duration"]["value"]
+        steps = []
+        for step in route["steps"]:
+            steps.append({
+                "instruction": step["html_instructions"],
+                "distance": step["distance"]["text"],
+                "duration": step["duration"]["text"],
+                "travel_mode": step["travel_mode"]
+            })
+
+        return {
+            "start_address": route["start_address"],
+            "end_address": route["end_address"],
+            "distance": route["distance"]["text"],
+            "duration": route["duration"]["text"],
+            "duration_seconds": duration_seconds,
+            "steps": steps
+        }
+
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Google Maps API リクエストエラー: {str(e)}"}
+
+
 # === ツール定義 ===
 function_descriptions = [
     {
@@ -365,8 +423,9 @@ app = Flask(__name__)
 def index():
     return render_template("index.html")
 
-@app.route("/display", methods=["POST"])
+@app.route("/display", methods=["POST", "GET"])
 def display():
+    maps_info = None 
     topic = request.form.get("query")
     departure = request.form.get("departure", "").strip()
     stay_days = int(request.form.get("stay_days", "1"))
@@ -374,6 +433,60 @@ def display():
     depth = request.form.get("depth", "basic")
     include_answer = request.form.get("include_answer") == "on"
     max_results = int(request.form.get("max_results", "3") or 3)
+    # フォームから交通手段を取得
+    travel_mode = request.form.get("travel_mode", "driving")  # デフォルトは車
+    travel_time = request.form.get("departure_time", "09:00")  # HH:MM形式
+
+    arrival_time_str = None
+
+    if maps_info and "duration_seconds" in maps_info:
+        jst = timezone(timedelta(hours=9))
+        travel_datetime = datetime.strptime(travel_date + " " + travel_time, "%Y-%m-%d %H:%M").replace(tzinfo=jst)
+        arrival_datetime = travel_datetime + timedelta(seconds=maps_info["duration_seconds"])
+        arrival_time_str = arrival_datetime.strftime("%Y-%m-%d %H:%M")
+
+    maps_text = None
+    maps_embed_url = None
+    if departure:
+        maps_info = None
+        maps_text = None
+        maps_embed_url = None
+        arrival_time_str = None  
+
+        if travel_mode == "transit" and departure:
+            # 公共交通機関は経路テキストのみ
+            jst = timezone(timedelta(hours=9))
+            travel_datetime = datetime.strptime(travel_date + " " + travel_time, "%Y-%m-%d %H:%M")
+            travel_datetime = travel_datetime.replace(tzinfo=jst)
+            departure_timestamp = int(travel_datetime.timestamp())
+            maps_info = get_google_maps_route(departure, topic, mode="transit", departure_time=departure_timestamp)
+        else:
+            # 徒歩・車はマップ表示
+            maps_info = get_google_maps_route(departure, topic, mode=travel_mode)
+
+        if maps_info and "error" not in maps_info:
+            # 経路概要のみ
+            maps_text = (
+                f"出発地: {maps_info['start_address']}\n"
+                f"目的地: {maps_info['end_address']}\n"
+                f"総距離: {maps_info['distance']}\n"
+                f"所要時間: {maps_info['duration']}\n"
+            )
+
+
+        # 徒歩・車のみ埋め込みマップURL生成
+            if travel_mode in ["driving", "walking"]:
+                origin = urllib.parse.quote(departure)
+                destination = urllib.parse.quote(topic)
+                maps_embed_url = (
+                    f"https://www.google.com/maps/embed/v1/directions"
+                    f"?key={os.getenv('GOOGLE_MAPS_API_KEY')}"
+                    f"&origin={origin}&destination={destination}&mode={travel_mode}"
+                )
+        else:
+            maps_text = maps_info.get("error") if maps_info else "経路情報が取得できません"
+
+
 
     if not topic:
         return render_template("display.html", result_text="目的地を入力してください。", pdf_url=None)
@@ -420,8 +533,13 @@ def display():
 旅行条件:
 - 目的地: {topic}
 - 出発地: {departure if departure else "目的地の中心地から開始"}
+- 出発時刻: {travel_time}
+- 到着予定時刻: {arrival_time_str if arrival_time_str else "不明"}
 - 期間: {date_range}（{stay_days}日間）
 - 旅行タイプ: {travel_type}
+
+
+スケジュール作成時は、到着予定時刻以降に観光開始できるようにしてください。
 
 調査項目:
 ・{date_range}の天気予報を調べる
@@ -571,6 +689,27 @@ def generate_pdf():
         return {"success": True, "pdf_url": pdf_url, "filename": Path(pdf_path).name}
     except Exception as e:
         return {"error": f"PDF生成エラー: {str(e)}"}, 500
+
+    travel_info = {
+        "destination": topic,
+        "departure": departure,
+        "stay_days": stay_days,
+        "date_range": date_range,
+        "travel_type": travel_type,
+    }    
+
+    structured_data = extract_structured_data(result_text, topic, date_range, stay_days, departure)
+
+
+    return render_template(
+        "display.html",
+        result_text=result_text,
+        pdf_url=pdf_url,
+        maps_text=maps_text,           # 追加
+        maps_embed_url=maps_embed_url,  # 追加
+        travel_info=travel_info,           # ←追加
+        structured_data=structured_data    # ←追加
+        )
 
 
 @app.route("/download/<path:filename>")
